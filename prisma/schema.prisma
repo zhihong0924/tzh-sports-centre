@@ -320,16 +320,18 @@ model MonthlyPayment {
 }
 
 model PaymentTransaction {
-  id               String         @id @default(cuid())
-  monthlyPaymentId String         @map("monthly_payment_id")
-  amount           Float
-  paymentMethod    String         @map("payment_method")
-  reference        String?
-  notes            String?
-  recordedBy       String         @map("recorded_by")
-  recordedAt       DateTime       @default(now()) @map("recorded_at")
-  idempotencyKey   String?        @unique @map("idempotency_key")
-  monthlyPayment   MonthlyPayment @relation(fields: [monthlyPaymentId], references: [id], onDelete: Cascade)
+  id                 String         @id @default(cuid())
+  monthlyPaymentId   String         @map("monthly_payment_id")
+  amount             Float
+  paymentMethod      String         @map("payment_method")
+  reference          String?
+  notes              String?
+  recordedBy         String         @map("recorded_by")
+  recordedAt         DateTime       @default(now()) @map("recorded_at")
+  idempotencyKey     String?        @unique @map("idempotency_key")
+  receiptUrl         String?        @map("receipt_url")
+  verificationStatus String?        @map("verification_status")
+  monthlyPayment     MonthlyPayment @relation(fields: [monthlyPaymentId], references: [id], onDelete: Cascade)
 
   @@map("payment_transactions")
 }

@@ -331,7 +331,8 @@
       "rackets": "我的球拍",
       "recurring": "固定预订",
       "settings": "设置",
-      "absences": "缺席记录"
+      "absences": "缺席记录",
+      "billing": "账单"
     },
     "recurring": {
       "noBookings": "暂无固定预订",
@@ -447,7 +448,23 @@
       "requiredFields": "名称、品牌和型号为必填"
     },
     "loadingProfile": "加载资料中...",
-    "loadingSettings": "加载设置中..."
+    "loadingSettings": "加载设置中...",
+    "billing": {
+      "outstandingAlert": "您有以下未付账单：",
+      "summary": "月度摘要",
+      "totalDue": "应付总额",
+      "paid": "已付",
+      "remaining": "未付",
+      "payNow": "立即付款",
+      "breakdown": "费用明细",
+      "date": "日期",
+      "type": "类型",
+      "description": "说明",
+      "amount": "金额",
+      "total": "合计",
+      "noActivity": "本月无账单",
+      "paymentHistory": "付款记录"
+    }
   },
   "lessons": {
     "title": "羽毛球课程",
@@ -1207,7 +1224,7 @@
     },
     "lessonTypes": {
       "title": "课程类型",
-      "description": "管理课程类型和定价",
+      "description": "描述",
       "add": "添加课程类型",
       "addTitle": "添加课程类型",
       "addDescription": "创建新的课程类型和定价",
@@ -1231,7 +1248,6 @@
       "basePrice": "基本价格",
       "slug": "URL 标识",
       "slugHint": "用于识别此课程类型",
-      "description": "描述",
       "descriptionPlaceholder": "简短描述...",
       "detailedDescription": "详细描述",
       "detailedDescriptionPlaceholder": "课程详情中显示的完整描述...",
@@ -1482,7 +1498,8 @@
     "stats": {
       "upcomingLessons": "即将到来的课程",
       "pendingRequests": "待处理请求",
-      "completedLessons": "已完成课程"
+      "completedLessons": "已完成课程",
+      "balanceDue": "未付余额"
     },
     "status": {
       "pending": "待处理",

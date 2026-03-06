@@ -17,6 +17,7 @@ import {
   Loader2,
   Wrench,
   X,
+  Receipt,
 } from "lucide-react";
 import { PersonalInfoTab } from "@/components/profile/PersonalInfoTab";
 import { BookingsTab } from "@/components/profile/BookingsTab";
@@ -25,6 +26,7 @@ import { LessonsTab } from "@/components/profile/LessonsTab";
 import { AbsencesTab } from "@/components/profile/AbsencesTab";
 import { RacketsTab } from "@/components/profile/RacketsTab";
 import { SettingsTab } from "@/components/profile/SettingsTab";
+import { BillingTab } from "@/components/profile/BillingTab";
 import { SkeletonProfile } from "@/components/ui/skeleton";
 import { useTranslations } from "next-intl";
 
@@ -35,6 +37,7 @@ type TabType =
   | "rackets"
   | "lessons"
   | "absences"
+  | "billing"
   | "settings";
 
 interface UserProfile {
@@ -76,6 +79,7 @@ function ProfileContent() {
     "rackets",
     "lessons",
     "absences",
+    "billing",
     "settings",
   ];
   const [activeTab, setActiveTab] = useState<TabType>(
@@ -236,6 +240,7 @@ function ProfileContent() {
           },
         ]
       : []),
+    { id: "billing" as TabType, label: t("tabs.billing"), icon: Receipt },
     { id: "settings" as TabType, label: t("tabs.settings"), icon: Settings },
   ];
 
@@ -345,6 +350,7 @@ function ProfileContent() {
           {activeTab === "rackets" && <RacketsTab />}
           {activeTab === "lessons" && profile?.isTrainee && <LessonsTab />}
           {activeTab === "absences" && profile?.isTrainee && <AbsencesTab />}
+          {activeTab === "billing" && <BillingTab />}
           {activeTab === "settings" &&
             (profile ? (
               <SettingsTab profile={profile} onUpdate={fetchProfile} />

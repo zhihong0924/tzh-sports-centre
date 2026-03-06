@@ -321,7 +321,8 @@
       "rackets": "Raket Saya",
       "recurring": "Berulang",
       "settings": "Tetapan",
-      "absences": "Ketidakhadiran"
+      "absences": "Ketidakhadiran",
+      "billing": "Pengebilan"
     },
     "recurring": {
       "noBookings": "Tiada tempahan berulang",
@@ -437,7 +438,23 @@
       "requiredFields": "Nama, jenama dan model diperlukan"
     },
     "loadingProfile": "Memuatkan profil...",
-    "loadingSettings": "Memuatkan tetapan..."
+    "loadingSettings": "Memuatkan tetapan...",
+    "billing": {
+      "outstandingAlert": "Anda mempunyai bil belum bayar untuk:",
+      "summary": "Ringkasan Bulanan",
+      "totalDue": "Jumlah Perlu Dibayar",
+      "paid": "Dibayar",
+      "remaining": "Baki",
+      "payNow": "Bayar Sekarang",
+      "breakdown": "Pecahan Caj",
+      "date": "Tarikh",
+      "type": "Jenis",
+      "description": "Penerangan",
+      "amount": "Amaun",
+      "total": "Jumlah",
+      "noActivity": "Tiada aktiviti pengebilan bulan ini",
+      "paymentHistory": "Sejarah Pembayaran"
+    }
   },
   "lessons": {
     "title": "Kelas Badminton",
@@ -655,7 +672,8 @@
     "stats": {
       "upcomingLessons": "Kelas Akan Datang",
       "pendingRequests": "Permohonan Tertunda",
-      "completedLessons": "Kelas Selesai"
+      "completedLessons": "Kelas Selesai",
+      "balanceDue": "Baki Perlu Dibayar"
     },
     "status": {
       "pending": "Tertunda",
@@ -1319,7 +1337,7 @@
     },
     "lessonTypes": {
       "title": "Jenis Kelas",
-      "description": "Urus jenis kelas dan harga",
+      "description": "Penerangan",
       "add": "Tambah Jenis Kelas",
       "addTitle": "Tambah Jenis Kelas",
       "addDescription": "Cipta jenis kelas baru dengan harga",
@@ -1343,7 +1361,6 @@
       "basePrice": "harga asas",
       "slug": "Slug URL",
       "slugHint": "Digunakan untuk mengenal pasti jenis pelajaran ini",
-      "description": "Penerangan",
       "descriptionPlaceholder": "Penerangan ringkas...",
       "detailedDescription": "Penerangan Terperinci",
       "detailedDescriptionPlaceholder": "Penerangan penuh yang ditunjukkan dalam butiran pelajaran...",

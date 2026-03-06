@@ -4,6 +4,14 @@
     {
       "path": "/api/cron/expire-bookings",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/generate-recurring-bills",
+      "schedule": "0 1 1 * *"
+    },
+    {
+      "path": "/api/cron/check-overdue-bills",
+      "schedule": "0 1 4 * *"
     }
   ]
 }

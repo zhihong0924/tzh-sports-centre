@@ -14,6 +14,8 @@ import {
   Users,
   MessageCircle,
   CalendarX2,
+  AlertTriangle,
+  X,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { startOfDay, isBefore } from "date-fns";
@@ -77,6 +79,23 @@ export function MemberDashboard() {
   const [counterRequestId, setCounterRequestId] = useState<string | null>(null);
 
   const [timetableKey, setTimetableKey] = useState(0);
+  const [billing, setBilling] = useState<{
+    unpaidAmount: number;
+    status: string;
+  } | null>(null);
+  const [overdueVisible, setOverdueVisible] = useState(true);
+
+  const fetchBillingSummary = useCallback(async () => {
+    try {
+      const now = new Date();
+      const res = await fetch(
+        `/api/profile/billing?summary=true&month=${now.getMonth() + 1}&year=${now.getFullYear()}`,
+      );
+      if (res.ok) setBilling(await res.json());
+    } catch {
+      /* billing card shows neutral state on error */
+    }
+  }, []);
 
   const fetchRequests = useCallback(async () => {
     try {
@@ -103,13 +122,14 @@ export function MemberDashboard() {
         const data = await res.json();
         setLessons(data.lessons || []);
         fetchRequests();
+        fetchBillingSummary();
       }
     } catch (error) {
       console.error("Error checking trainee status:", error);
     } finally {
       setLoading(false);
     }
-  }, [fetchRequests]);
+  }, [fetchRequests, fetchBillingSummary]);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -377,10 +397,39 @@ export function MemberDashboard() {
         </Button>
       </div>
 
+      {overdueVisible &&
+        billing &&
+        billing.status !== "paid" &&
+        new Date().getDate() > 3 && (
+          <div className="mb-4 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg p-3 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm text-red-800 dark:text-red-200">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              <span>
+                Your recurring booking payment of{" "}
+                <strong>RM{billing.unpaidAmount.toFixed(2)}</strong> was due on
+                the 3rd.{" "}
+                <a
+                  href="/profile?tab=billing"
+                  className="underline font-medium"
+                >
+                  Pay now →
+                </a>
+              </span>
+            </div>
+            <button
+              onClick={() => setOverdueVisible(false)}
+              className="p-1 hover:bg-red-100 dark:hover:bg-red-900/40 rounded"
+            >
+              <X className="w-4 h-4 text-red-600" />
+            </button>
+          </div>
+        )}
+
       <StatsCards
         upcomingCount={upcomingLessons.length}
         pendingCount={pendingRequests.length}
         completedCount={completedCount}
+        billing={billing}
       />
 
       <div className="mb-6">

@@ -42,8 +42,13 @@ import {
   Eye,
   CheckSquare,
   Mail,
+  AlertCircle,
+  Zap,
+  ListFilter,
 } from "lucide-react";
 import { isAdmin } from "@/lib/admin";
+import { OutstandingDebtsView } from "@/components/admin/OutstandingDebtsView";
+import { ReceiptReviewDialog } from "@/components/admin/ReceiptReviewDialog";
 
 const MONTHS = [
   "January",
@@ -68,6 +73,8 @@ interface PaymentTransaction {
   notes: string | null;
   recordedBy: string;
   recordedAt: string;
+  verificationStatus?: string | null;
+  receiptUrl?: string | null;
 }
 
 interface UserSummary {
@@ -147,6 +154,23 @@ export default function PaymentsContent() {
   const [bulkPaymentMethod, setBulkPaymentMethod] = useState<string>("cash");
   const [bulkReference, setBulkReference] = useState("");
   const [bulkNotes, setBulkNotes] = useState("");
+
+  const [showOutstanding, setShowOutstanding] = useState(false);
+  const [generateDialogOpen, setGenerateDialogOpen] = useState(false);
+  const [generateLoading, setGenerateLoading] = useState(false);
+
+  const [receiptReviewOpen, setReceiptReviewOpen] = useState(false);
+  const [pendingReceipt, setPendingReceipt] = useState<{
+    transactionId: string;
+    userId: string;
+    userName: string;
+    month: number;
+    year: number;
+    amount: number;
+    paymentMethod: string;
+    receiptUrl: string;
+    notes: string | null;
+  } | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -347,6 +371,83 @@ export default function PaymentsContent() {
     setSelectedUserIds(new Set());
   };
 
+  const handleOutstandingRecordPayment = (
+    userId: string,
+    name: string,
+    uid: string,
+    month: number,
+    year: number,
+    totalAmount: number,
+    paidAmount: number,
+    unpaidAmount: number,
+  ) => {
+    const syntheticUser: UserSummary = {
+      userId,
+      uid,
+      name,
+      email: "",
+      phone: "",
+      totalAmount,
+      paidAmount,
+      unpaidAmount,
+      totalHours: 0,
+      bookingsCount: 0,
+      regularBookings: 0,
+      recurringBookings: 0,
+      lessonAmount: 0,
+      lessonCount: 0,
+      status: paidAmount === 0 ? "unpaid" : "partial",
+      paymentId: null,
+      transactions: [],
+    };
+    setSelectedMonth(month);
+    setSelectedYear(year);
+    setSelectedUser(syntheticUser);
+    setPaymentAmount(unpaidAmount.toFixed(2));
+    setShowOutstanding(false);
+    setPaymentDialogOpen(true);
+  };
+
+  const handleGenerateBills = async () => {
+    setGenerateLoading(true);
+    try {
+      const res = await fetch("/api/admin/billing/generate-month", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ month: selectedMonth, year: selectedYear }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setGenerateDialogOpen(false);
+        fetchData();
+        alert(`Generated bills for ${data.generated} users (${data.skipped} skipped)`);
+      }
+    } catch (error) {
+      console.error("Error generating bills:", error);
+    } finally {
+      setGenerateLoading(false);
+    }
+  };
+
+  const openReceiptReview = (user: UserSummary) => {
+    const pending = user.transactions.find(
+      (tx) => tx.verificationStatus === "pending_verification" && tx.receiptUrl,
+    );
+    if (!pending || !pending.receiptUrl) return;
+    setPendingReceipt({
+      transactionId: pending.id,
+      userId: user.userId,
+      userName: user.name,
+      month: selectedMonth,
+      year: selectedYear,
+      amount: pending.amount,
+      paymentMethod: pending.paymentMethod,
+      receiptUrl: pending.receiptUrl,
+      notes: pending.notes,
+    });
+    setReceiptReviewOpen(true);
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "paid":
@@ -387,6 +488,14 @@ export default function PaymentsContent() {
     <div className="space-y-6">
       {/* Header Actions */}
       <div className="flex items-center justify-end gap-2">
+        <Button
+          onClick={() => setShowOutstanding((v) => !v)}
+          variant={showOutstanding ? "default" : "outline"}
+          size="sm"
+        >
+          <ListFilter className="w-4 h-4 mr-2" />
+          {showOutstanding ? "Monthly View" : "All Unpaid"}
+        </Button>
         <Button onClick={exportCSV} variant="outline" size="sm">
           <Download className="w-4 h-4 mr-2" />
           Export CSV
@@ -396,6 +505,14 @@ export default function PaymentsContent() {
           Refresh
         </Button>
       </div>
+
+      {/* Outstanding debts view */}
+      {showOutstanding && (
+        <OutstandingDebtsView
+          onRecordPayment={handleOutstandingRecordPayment}
+          onGenerateBills={() => setGenerateDialogOpen(true)}
+        />
+      )}
 
       {/* Month Navigator */}
       <Card>
@@ -675,29 +792,44 @@ export default function PaymentsContent() {
                     </div>
 
                     {/* Actions */}
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => fetchBreakdown(user)}
-                      >
-                        <Eye className="w-4 h-4 mr-1" />
-                        View
-                      </Button>
-                      {user.status !== "paid" && (
+                    <div className="flex flex-col gap-2 items-end">
+                      {user.transactions.some(
+                        (tx) => tx.verificationStatus === "pending_verification",
+                      ) && (
                         <Button
                           size="sm"
-                          className="bg-green-600 hover:bg-green-700"
-                          onClick={() => {
-                            setSelectedUser(user);
-                            setPaymentAmount(user.unpaidAmount.toFixed(2));
-                            setPaymentDialogOpen(true);
-                          }}
+                          variant="outline"
+                          className="border-amber-400 text-amber-600 hover:bg-amber-50"
+                          onClick={() => openReceiptReview(user)}
                         >
-                          <CreditCard className="w-4 h-4 mr-1" />
-                          Pay
+                          <AlertCircle className="w-4 h-4 mr-1" />
+                          Review Receipt
                         </Button>
                       )}
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => fetchBreakdown(user)}
+                        >
+                          <Eye className="w-4 h-4 mr-1" />
+                          View
+                        </Button>
+                        {user.status !== "paid" && (
+                          <Button
+                            size="sm"
+                            className="bg-green-600 hover:bg-green-700"
+                            onClick={() => {
+                              setSelectedUser(user);
+                              setPaymentAmount(user.unpaidAmount.toFixed(2));
+                              setPaymentDialogOpen(true);
+                            }}
+                          >
+                            <CreditCard className="w-4 h-4 mr-1" />
+                            Pay
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -950,6 +1082,51 @@ export default function PaymentsContent() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Generate Bills Confirmation Dialog */}
+      <Dialog open={generateDialogOpen} onOpenChange={setGenerateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Zap className="w-5 h-5 text-primary" />
+              Generate Monthly Bills
+            </DialogTitle>
+            <DialogDescription>
+              Generate recurring booking bills for {MONTHS[selectedMonth - 1]} {selectedYear}.
+              Users with active recurring bookings will receive a bill and notification.
+              Already paid/partial records will be skipped.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setGenerateDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleGenerateBills}
+              disabled={generateLoading}
+              className="bg-primary hover:bg-primary/90"
+            >
+              {generateLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <Zap className="w-4 h-4 mr-2" />
+              )}
+              Generate Bills
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Receipt Review Dialog */}
+      <ReceiptReviewDialog
+        open={receiptReviewOpen}
+        onOpenChange={setReceiptReviewOpen}
+        receipt={pendingReceipt}
+        onSuccess={() => {
+          setPendingReceipt(null);
+          fetchData();
+        }}
+      />
 
       {/* Bulk Payment Dialog */}
       <Dialog open={bulkPayDialogOpen} onOpenChange={setBulkPayDialogOpen}>

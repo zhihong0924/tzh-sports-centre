@@ -332,7 +332,8 @@
       "rackets": "My Rackets",
       "recurring": "Recurring",
       "settings": "Settings",
-      "absences": "Absences"
+      "absences": "Absences",
+      "billing": "Billing"
     },
     "recurring": {
       "noBookings": "No recurring bookings",
@@ -448,7 +449,23 @@
       "requiredFields": "Name, brand, and model are required"
     },
     "loadingProfile": "Loading profile...",
-    "loadingSettings": "Loading settings..."
+    "loadingSettings": "Loading settings...",
+    "billing": {
+      "outstandingAlert": "You have unpaid bills for:",
+      "summary": "Monthly Summary",
+      "totalDue": "Total Due",
+      "paid": "Paid",
+      "remaining": "Remaining",
+      "payNow": "Pay Now",
+      "breakdown": "Charges Breakdown",
+      "date": "Date",
+      "type": "Type",
+      "description": "Description",
+      "amount": "Amount",
+      "total": "Total",
+      "noActivity": "No billing activity this month",
+      "paymentHistory": "Payment History"
+    }
   },
   "lessons": {
     "title": "Badminton Lessons",
@@ -666,7 +683,8 @@
     "stats": {
       "upcomingLessons": "Upcoming Lessons",
       "pendingRequests": "Pending Requests",
-      "completedLessons": "Completed Lessons"
+      "completedLessons": "Completed Lessons",
+      "balanceDue": "Balance Due"
     },
     "status": {
       "pending": "Pending",
@@ -1331,7 +1349,7 @@
     },
     "lessonTypes": {
       "title": "Lesson Types",
-      "description": "Manage lesson types and pricing",
+      "description": "Description",
       "add": "Add Lesson Type",
       "addTitle": "Add Lesson Type",
       "addDescription": "Create a new lesson type with pricing",
@@ -1355,7 +1373,6 @@
       "basePrice": "base price",
       "slug": "URL Slug",
       "slugHint": "Used to identify this lesson type",
-      "description": "Description",
       "descriptionPlaceholder": "Short description...",
       "detailedDescription": "Detailed Description",
       "detailedDescriptionPlaceholder": "Full description shown in lesson details...",
