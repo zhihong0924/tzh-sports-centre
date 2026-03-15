@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isAdmin } from "@/lib/admin";
 import { calculateBookingAmount } from "@/lib/recurring-booking-utils";
+import { calculatePaymentDeadline } from "@/lib/booking-expiration";
 import {
   validateMalaysianPhone,
   validateEmail,
@@ -301,6 +302,7 @@ export async function POST(request: NextRequest) {
             endTime,
             validatedSport,
           );
+          const now = new Date();
           const booking = await tx.booking.create({
             data: {
               userId,
@@ -318,6 +320,7 @@ export async function POST(request: NextRequest) {
               guestName: bookingGuestName,
               guestPhone: bookingGuestPhone,
               guestEmail: bookingGuestEmail,
+              expiresAt: paymentStatus === "pending" ? calculatePaymentDeadline(now) : null,
             },
             include: {
               court: true,
@@ -363,6 +366,7 @@ export async function POST(request: NextRequest) {
         bookings: createdBookings,
         bookingIds: createdBookings.map((b) => b.id),
         count: createdBookings.length,
+        expiresAt: createdBookings[0]?.expiresAt || null,
       },
       { status: 201 },
     );

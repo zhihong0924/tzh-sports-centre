@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { put, del } from "@vercel/blob";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { uploadFile, deleteFile } from "@/lib/blob-upload";
 
 const MAX_FILE_SIZE = 3 * 1024 * 1024;
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -41,17 +41,14 @@ export async function POST(request: NextRequest) {
 
     if (user?.avatarUrl) {
       try {
-        await del(user.avatarUrl);
+        await deleteFile(user.avatarUrl);
       } catch {}
     }
 
     const timestamp = Date.now();
     const filename = `avatars/avatar_${session.user.id}_${timestamp}.webp`;
 
-    const blob = await put(filename, file, {
-      access: "public",
-      addRandomSuffix: false,
-    });
+    const blob = await uploadFile(file, filename);
 
     await prisma.user.update({
       where: { id: session.user.id },
@@ -86,7 +83,7 @@ export async function DELETE(request: NextRequest) {
 
     if (user?.avatarUrl) {
       try {
-        await del(user.avatarUrl);
+        await deleteFile(user.avatarUrl);
       } catch {}
     }
 

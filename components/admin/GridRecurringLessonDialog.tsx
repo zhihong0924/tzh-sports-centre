@@ -109,7 +109,7 @@ export function GridRecurringLessonDialog({
           : (typesData?.lessonTypes ?? []);
         setLessonTypes(types.filter((lt) => lt.isActive !== false));
         setStudents(
-          (membersData?.members ?? []).filter(
+          (membersData?.all ?? membersData?.members ?? []).filter(
             (m: StudentOption) => m.isTrainee,
           ),
         );

@@ -26,6 +26,7 @@
     "home": "首页",
     "booking": "预订球场",
     "lessons": "课程",
+    "openLessons": "开放课程",
     "stringing": "穿线服务",
     "shop": "商店 & 穿线",
     "shopAll": "所有产品",
@@ -319,7 +320,27 @@
     "invalidFileType": "文件类型无效。请上传图片。",
     "fileTooLarge": "文件太大。最大尺寸为5MB。",
     "uploadFailed": "上传收据失败。请重试。",
-    "uploadingReceipt": "正在上传收据..."
+    "uploadingReceipt": "正在上传收据...",
+    "training": "训练",
+    "payment": {
+      "title": "完成付款",
+      "scanQR": "扫描二维码付款",
+      "amount": "金额：RM{amount}",
+      "timeRemaining": "剩余付款时间",
+      "expired": "付款窗口已过期",
+      "expiredDesc": "由于付款窗口已过期，您的预订已被取消。",
+      "verified": "付款已验证",
+      "verifiedDesc": "您的付款已成功验证。",
+      "pendingVerification": "收据已上传",
+      "pendingVerificationDesc": "您的收据正在验证中。审核通过后会通知您。",
+      "bookAnother": "预订另一个球场",
+      "viewBookings": "查看我的预订",
+      "uploadReceipt": "上传付款收据",
+      "paymentMethods": "付款方式"
+    },
+    "conflict": {
+      "trainingGroup": "该时段被训练组占用"
+    }
   },
   "profile": {
     "title": "我的资料",
@@ -558,6 +579,25 @@
       "submitting": "提交中...",
       "successTitle": "申请已提交！",
       "successMessage": "感谢您的关注！我们将在24小时内与您联系安排试课。"
+    },
+    "groups": {
+      "title": "训练小组",
+      "subtitle": "加入适合您时间和水平的训练小组",
+      "spotsLeft": "剩余 {count} 个名额",
+      "full": "已满",
+      "join": "加入小组",
+      "leave": "退出小组",
+      "joined": "已加入",
+      "joinConfirm": "加入此训练小组？",
+      "joinConfirmDesc": "您将被加入此小组的定期训练课程。",
+      "leaveConfirm": "退出此训练小组？",
+      "leaveConfirmDesc": "您将被移出此小组的定期训练课程。",
+      "perSession": "每节课",
+      "schedule": "课程表",
+      "coach": "教练",
+      "noGroups": "目前没有可用的训练小组。",
+      "filterAll": "全部",
+      "memberSince": "加入时间"
     }
   },
   "auth": {
@@ -844,6 +884,9 @@
       "conflictError": "该时段已被占用",
       "dragToMove": "拖动以移动",
       "noTrainees": "未找到学员",
+      "openEnrollment": "开放报名（任何用户均可加入并付款）",
+      "pricePerStudent": "每位学员费用",
+      "pricePerStudentPlaceholder": "留空则根据课程价格自动计算",
       "hourSingular": "小时",
       "hourPlural": "小时",
       "moveSelected": "移动所选",
@@ -2055,5 +2098,37 @@
       "activePeriod": "{start} — {end}",
       "videoDeleted": "视频已删除"
     }
+  },
+  "openLessons": {
+    "title": "开放课程",
+    "description": "浏览并报名参加即将开始的团体课程",
+    "noSessions": "目前没有开放课程",
+    "spotsLeft": "剩余 {count} 名额",
+    "full": "已满员",
+    "join": "报名",
+    "joined": "已报名",
+    "pending": "等待付款",
+    "paid": "已确认",
+    "cancelled": "已取消",
+    "rejected": "已拒绝",
+    "cancelEnrollment": "取消报名",
+    "uploadReceipt": "上传收据",
+    "pricePerPerson": "RM{price} / 人",
+    "duration": "{hours} 小时",
+    "enrollDialogTitle": "报名课程",
+    "enrollDialogDesc": "您正在报名此课程，请完成付款并上传收据。",
+    "amountDue": "应付金额",
+    "paymentInstructions": "请转账至我们的账户并上传收据。",
+    "enrollSuccess": "报名成功！请上传付款收据。",
+    "enrollError": "报名失败",
+    "cancelSuccess": "已取消报名",
+    "cancelError": "取消报名失败",
+    "receiptUploaded": "收据已上传，等待管理员确认。",
+    "receiptError": "上传收据失败",
+    "loginToJoin": "请登录后再报名课程",
+    "viewReceipt": "查看收据",
+    "confirmCancel": "取消您的报名？",
+    "confirmCancelDesc": "如有剩余名额，您可以重新报名。",
+    "confirm": "确认"
   }
 }

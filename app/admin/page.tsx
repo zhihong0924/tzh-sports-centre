@@ -12,7 +12,6 @@ import {
   GraduationCap,
   Trophy,
   BookOpen,
-  UsersRound,
 } from "lucide-react";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
@@ -85,13 +84,6 @@ export default async function AdminPage() {
       icon: BookOpen,
       href: "/admin/lesson-types",
       iconBg: "bg-primary/15 text-primary",
-    },
-    {
-      titleKey: "trainingGroups.title",
-      descriptionKey: "trainingGroups.description",
-      icon: UsersRound,
-      href: "/admin/training-groups",
-      iconBg: "bg-primary/10 text-primary",
     },
     // Video subscriptions hidden - not complete yet
     // {

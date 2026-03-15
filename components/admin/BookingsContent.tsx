@@ -4,10 +4,12 @@ import { toast } from "sonner";
 import { MultiSlotDialog } from "@/components/admin/MultiSlotDialog";
 import { SlotTypeChooser } from "@/components/admin/SlotTypeChooser";
 import { GridLessonDialog } from "@/components/admin/GridLessonDialog";
+import { GridEditLessonDialog } from "@/components/admin/GridEditLessonDialog";
 import { GridRecurringLessonDialog } from "@/components/admin/GridRecurringLessonDialog";
 import { RescheduleConfirmDialog } from "@/components/admin/RescheduleConfirmDialog";
 import { BulkMoveConfirmDialog } from "@/components/admin/BulkMoveConfirmDialog";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { format, startOfDay } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
@@ -122,6 +124,7 @@ interface BookingInfo {
   isLesson?: boolean;
   lessonStudents?: string[];
   lessonType?: string;
+  lessonStatus?: string;
 }
 
 interface FullBooking {
@@ -173,6 +176,7 @@ interface RecurringBooking {
 
 export default function BookingsContent() {
   const { data: session, status } = useSession();
+  const router = useRouter();
   const t = useTranslations("admin.bookings");
   const tAdmin = useTranslations("admin");
   const tDays = useTranslations("days");
@@ -883,6 +887,30 @@ export default function BookingsContent() {
   const [editingRecurring, setEditingRecurring] =
     useState<RecurringBooking | null>(null);
 
+  const [editLessonDialogOpen, setEditLessonDialogOpen] = useState(false);
+  const [editingLessonId, setEditingLessonId] = useState<string | null>(null);
+  const [editingLessonStatus, setEditingLessonStatus] = useState<string | undefined>(undefined);
+
+  const openEditLessonDialogById = (lessonId: string, status?: string) => {
+    setEditingLessonId(lessonId);
+    setEditingLessonStatus(status);
+    setEditLessonDialogOpen(true);
+  };
+
+  const handleCancelLessonFromGrid = async (lessonId: string) => {
+    if (!confirm("Are you sure you want to cancel this lesson?")) return;
+    try {
+      await fetch("/api/admin/lessons", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lessonId }),
+      });
+      fetchBookings();
+    } catch (error) {
+      console.error("Error cancelling lesson:", error);
+    }
+  };
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -1540,6 +1568,20 @@ export default function BookingsContent() {
                                     <Badge className="mt-1 text-[10px] px-1 py-0 bg-orange-100 text-orange-700 border-0">
                                       {booking.lessonType}
                                     </Badge>
+                                    {!selectionMode && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="w-full mt-1 h-6 text-orange-700 hover:text-orange-600 hover:bg-orange-100"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          openEditLessonDialogById(booking.id, booking.lessonStatus);
+                                        }}
+                                      >
+                                        <Pencil className="w-3 h-3 mr-1" />
+                                        Edit
+                                      </Button>
+                                    )}
                                   </div>
                                 </td>
                               );
@@ -3871,6 +3913,15 @@ export default function BookingsContent() {
         slotTime={selectedSlot?.slotTime ?? null}
         lessonDate={selectedDate}
         onSuccess={fetchBookings}
+      />
+
+      <GridEditLessonDialog
+        open={editLessonDialogOpen}
+        onOpenChange={setEditLessonDialogOpen}
+        lessonId={editingLessonId}
+        lessonStatus={editingLessonStatus}
+        onSuccess={fetchBookings}
+        onCancel={handleCancelLessonFromGrid}
       />
 
       <GridRecurringLessonDialog

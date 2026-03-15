@@ -17,6 +17,32 @@ export async function GET(request: NextRequest) {
     const date = searchParams.get("date");
     const month = searchParams.get("month");
     const memberId = searchParams.get("memberId");
+    const upcoming = searchParams.get("upcoming");
+    const limitParam = searchParams.get("limit");
+    const lessonId = searchParams.get("lessonId");
+
+    // Fetch a single lesson by ID
+    if (lessonId) {
+      const lesson = await prisma.lessonSession.findUnique({
+        where: { id: lessonId },
+        include: {
+          court: true,
+          teacher: { select: { id: true, name: true } },
+          students: { select: { id: true, name: true, phone: true, skillLevel: true } },
+          enrollments: {
+            select: {
+              id: true, status: true, amountDue: true, receiptUrl: true,
+              user: { select: { id: true, name: true, phone: true, email: true } },
+            },
+            orderBy: { createdAt: "asc" },
+          },
+        },
+      });
+      if (!lesson) {
+        return NextResponse.json({ error: "Lesson not found" }, { status: 404 });
+      }
+      return NextResponse.json({ lesson });
+    }
 
     const where: Record<string, unknown> = {};
 
@@ -30,6 +56,11 @@ export async function GET(request: NextRequest) {
         gte: startOfMonth,
         lte: endOfMonth,
       };
+    } else if (upcoming === "true") {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      where.lessonDate = { gte: today };
+      where.status = { not: "cancelled" };
     }
 
     if (memberId) {
@@ -40,6 +71,7 @@ export async function GET(request: NextRequest) {
 
     const lessons = await prisma.lessonSession.findMany({
       where,
+      take: limitParam ? parseInt(limitParam) : undefined,
       include: {
         court: true,
         teacher: { select: { id: true, name: true } },
@@ -57,8 +89,20 @@ export async function GET(request: NextRequest) {
             status: true,
           },
         },
+        enrollments: {
+          select: {
+            id: true,
+            status: true,
+            amountDue: true,
+            receiptUrl: true,
+            user: {
+              select: { id: true, name: true, phone: true, email: true },
+            },
+          },
+          orderBy: { createdAt: "asc" },
+        },
       },
-      orderBy: [{ lessonDate: "desc" }, { startTime: "asc" }],
+      orderBy: [{ lessonDate: upcoming === "true" ? "asc" : "desc" }, { startTime: "asc" }],
     });
 
     return NextResponse.json({ lessons });
@@ -89,20 +133,22 @@ export async function POST(request: NextRequest) {
       studentIds,
       notes,
       teacherId,
+      isOpenEnrollment,
+      pricePerStudent,
     } = body;
+
+    const ids: string[] = studentIds || [];
 
     if (
       !courtId ||
       !lessonDate ||
       !startTime ||
-      !lessonType ||
-      !studentIds ||
-      studentIds.length === 0
+      !lessonType
     ) {
       return NextResponse.json(
         {
           error:
-            "Court, date, time, lesson type, and at least one student are required",
+            "Court, date, time, and lesson type are required",
         },
         { status: 400 },
       );
@@ -145,7 +191,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (studentIds.length > lessonTypeRecord.maxStudents) {
+    if (studentIds && studentIds.length > lessonTypeRecord.maxStudents) {
       return NextResponse.json(
         {
           error: `${lessonTypeRecord.name} allows maximum ${lessonTypeRecord.maxStudents} student(s)`,
@@ -292,12 +338,14 @@ export async function POST(request: NextRequest) {
           billingType,
           duration: lessonDuration,
           price,
+          pricePerStudent: pricePerStudent ?? (price / (lessonTypeRecord.maxStudents || 1)),
+          isOpenEnrollment: isOpenEnrollment ?? false,
           status: "scheduled",
           notes,
           teacherId: teacherId || null,
-          students: {
-            connect: studentIds.map((id: string) => ({ id })),
-          },
+          students: ids.length > 0 ? {
+            connect: ids.map((id: string) => ({ id })),
+          } : undefined,
         },
         include: {
           court: true,
@@ -345,7 +393,17 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { lessonId, status, notes, teacherId } = body;
+    const {
+      lessonId,
+      status,
+      notes,
+      teacherId,
+      courtId,
+      startTime,
+      lessonType,
+      duration,
+      studentIds,
+    } = body;
 
     if (!lessonId) {
       return NextResponse.json(
@@ -357,6 +415,7 @@ export async function PATCH(request: NextRequest) {
     const updateData: Record<string, unknown> = {};
     if (status) updateData.status = status;
     if (notes !== undefined) updateData.notes = notes;
+
     if (teacherId !== undefined) {
       if (teacherId) {
         const teacher = await prisma.teacher.findUnique({
@@ -369,12 +428,114 @@ export async function PATCH(request: NextRequest) {
           );
         }
       }
-      updateData.teacherId = teacherId;
+      updateData.teacherId = teacherId || null;
+    }
+
+    // Full lesson edit fields
+    if (courtId !== undefined) updateData.courtId = courtId;
+
+    if (lessonType !== undefined) {
+      const lessonTypeRecord = await prisma.lessonType.findUnique({
+        where: { slug: lessonType },
+        include: { pricingTiers: { orderBy: { duration: "asc" } } },
+      });
+      if (!lessonTypeRecord || !lessonTypeRecord.isActive) {
+        return NextResponse.json(
+          { error: "Invalid lesson type" },
+          { status: 400 },
+        );
+      }
+      updateData.lessonType = lessonType;
+      updateData.billingType = lessonTypeRecord.billingType;
+
+      const lessonDuration = duration ?? lessonTypeRecord.pricingTiers[0]?.duration ?? 1.5;
+      updateData.duration = lessonDuration;
+
+      const tier = lessonTypeRecord.pricingTiers.find(
+        (t) => t.duration === lessonDuration,
+      );
+      const price = tier ? tier.price : lessonTypeRecord.price;
+      updateData.price = price;
+      updateData.pricePerStudent = price / (lessonTypeRecord.maxStudents || 1);
+
+      if (startTime !== undefined) {
+        const [hours, minutes] = startTime.split(":").map(Number);
+        const durationMinutes = lessonDuration * 60;
+        const endMinutes = minutes + durationMinutes;
+        const endHours = hours + Math.floor(endMinutes / 60);
+        const endTime = `${endHours.toString().padStart(2, "0")}:${(endMinutes % 60).toString().padStart(2, "0")}`;
+        updateData.startTime = startTime;
+        updateData.endTime = endTime;
+
+        // Check for conflicts (excluding this lesson)
+        const existing = await prisma.lessonSession.findUnique({
+          where: { id: lessonId },
+          select: { lessonDate: true, courtId: true },
+        });
+        if (existing) {
+          const checkCourtId = courtId ?? existing.courtId;
+          const conflictingLesson = await prisma.lessonSession.findFirst({
+            where: {
+              id: { not: lessonId },
+              courtId: checkCourtId,
+              lessonDate: existing.lessonDate,
+              status: { in: ["scheduled"] },
+              OR: [{ startTime: { lt: endTime }, endTime: { gt: startTime } }],
+            },
+          });
+          if (conflictingLesson) {
+            return NextResponse.json(
+              { error: "This time slot conflicts with another lesson" },
+              { status: 409 },
+            );
+          }
+        }
+      }
+    } else if (startTime !== undefined || duration !== undefined) {
+      // startTime/duration changed without lessonType — recompute endTime
+      const existing = await prisma.lessonSession.findUnique({
+        where: { id: lessonId },
+        select: { startTime: true, duration: true, lessonDate: true, courtId: true },
+      });
+      if (existing) {
+        const resolvedStart = startTime ?? existing.startTime;
+        const resolvedDuration = duration ?? existing.duration;
+        const [hours, minutes] = resolvedStart.split(":").map(Number);
+        const durationMinutes = resolvedDuration * 60;
+        const endMinutes = minutes + durationMinutes;
+        const endHours = hours + Math.floor(endMinutes / 60);
+        const endTime = `${endHours.toString().padStart(2, "0")}:${(endMinutes % 60).toString().padStart(2, "0")}`;
+        if (startTime !== undefined) updateData.startTime = startTime;
+        if (duration !== undefined) updateData.duration = duration;
+        updateData.endTime = endTime;
+
+        const checkCourtId = courtId ?? existing.courtId;
+        const conflictingLesson = await prisma.lessonSession.findFirst({
+          where: {
+            id: { not: lessonId },
+            courtId: checkCourtId,
+            lessonDate: existing.lessonDate,
+            status: { in: ["scheduled"] },
+            OR: [{ startTime: { lt: endTime }, endTime: { gt: resolvedStart } }],
+          },
+        });
+        if (conflictingLesson) {
+          return NextResponse.json(
+            { error: "This time slot conflicts with another lesson" },
+            { status: 409 },
+          );
+        }
+      }
     }
 
     const lesson = await prisma.lessonSession.update({
       where: { id: lessonId },
-      data: updateData,
+      data: {
+        ...updateData,
+        ...(studentIds !== undefined && {
+          students: { set: studentIds.map((id: string) => ({ id })) },
+        }),
+      },
       include: {
         court: true,
         teacher: { select: { id: true, name: true } },
@@ -385,6 +546,16 @@ export async function PATCH(request: NextRequest) {
             phone: true,
             skillLevel: true,
           },
+        },
+        enrollments: {
+          select: {
+            id: true,
+            status: true,
+            amountDue: true,
+            receiptUrl: true,
+            user: { select: { id: true, name: true, phone: true, email: true } },
+          },
+          orderBy: { createdAt: "asc" },
         },
       },
     });

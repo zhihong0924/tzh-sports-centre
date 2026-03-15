@@ -23,6 +23,12 @@ export async function GET() {
             skillLevel: true,
           },
         },
+        court: {
+          select: { id: true, name: true },
+        },
+        teacher: {
+          select: { id: true, name: true },
+        },
       },
       orderBy: { name: "asc" },
     });
@@ -45,7 +51,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { name, sport, notes, memberIds } = await request.json();
+    const {
+      name, sport, notes, memberIds,
+      groupType, maxCapacity, duration,
+      dayOfWeek, startTime, endTime,
+      courtId, teacherId, pricePerSession, isJoinable,
+    } = await request.json();
 
     if (!name?.trim()) {
       return NextResponse.json(
@@ -69,6 +80,16 @@ export async function POST(request: NextRequest) {
       data: {
         name: name.trim(),
         sport: sport || "badminton",
+        groupType: groupType || "ONE_TO_ONE",
+        maxCapacity: maxCapacity || 1,
+        duration: duration || 1.5,
+        dayOfWeek: dayOfWeek ?? 0,
+        startTime: startTime || "09:00",
+        endTime: endTime || "10:30",
+        courtId: courtId || null,
+        teacherId: teacherId || null,
+        pricePerSession: pricePerSession || null,
+        isJoinable: isJoinable ?? true,
         notes: notes || null,
         members: {
           connect: (memberIds || []).map((id: string) => ({ id })),
@@ -84,6 +105,8 @@ export async function POST(request: NextRequest) {
             skillLevel: true,
           },
         },
+        court: { select: { id: true, name: true } },
+        teacher: { select: { id: true, name: true } },
       },
     });
 
@@ -105,7 +128,12 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id, name, sport, notes, memberIds } = await request.json();
+    const {
+      id, name, sport, notes, memberIds,
+      groupType, maxCapacity, duration,
+      dayOfWeek, startTime, endTime,
+      courtId, teacherId, pricePerSession, isJoinable,
+    } = await request.json();
 
     if (!id) {
       return NextResponse.json(
@@ -139,6 +167,16 @@ export async function PATCH(request: NextRequest) {
     if (name !== undefined) updateData.name = name.trim();
     if (sport !== undefined) updateData.sport = sport;
     if (notes !== undefined) updateData.notes = notes || null;
+    if (groupType !== undefined) updateData.groupType = groupType;
+    if (maxCapacity !== undefined) updateData.maxCapacity = maxCapacity;
+    if (duration !== undefined) updateData.duration = duration;
+    if (dayOfWeek !== undefined) updateData.dayOfWeek = dayOfWeek;
+    if (startTime !== undefined) updateData.startTime = startTime;
+    if (endTime !== undefined) updateData.endTime = endTime;
+    if (courtId !== undefined) updateData.courtId = courtId || null;
+    if (teacherId !== undefined) updateData.teacherId = teacherId || null;
+    if (pricePerSession !== undefined) updateData.pricePerSession = pricePerSession || null;
+    if (isJoinable !== undefined) updateData.isJoinable = isJoinable;
 
     if (memberIds !== undefined) {
       updateData.members = {
@@ -159,6 +197,8 @@ export async function PATCH(request: NextRequest) {
             skillLevel: true,
           },
         },
+        court: { select: { id: true, name: true } },
+        teacher: { select: { id: true, name: true } },
       },
     });
 

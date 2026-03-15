@@ -14,7 +14,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -76,6 +78,8 @@ export function GridLessonDialog({
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
   const [teacherId, setTeacherId] = useState("");
   const [notes, setNotes] = useState("");
+  const [isOpenEnrollment, setIsOpenEnrollment] = useState(false);
+  const [pricePerStudent, setPricePerStudent] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   if (open && !lastFetchedOpen) {
@@ -92,7 +96,7 @@ export function GridLessonDialog({
           : typesData?.lessonTypes || [];
         setLessonTypes(types.filter((lt) => lt.isActive !== false));
         setStudents(
-          (membersData?.members || []).filter(
+          (membersData?.all || membersData?.members || []).filter(
             (m: StudentOption & { isTrainee?: boolean }) => m.isTrainee,
           ),
         );
@@ -115,6 +119,8 @@ export function GridLessonDialog({
     setSelectedStudentIds([]);
     setTeacherId("");
     setNotes("");
+    setIsOpenEnrollment(false);
+    setPricePerStudent("");
   };
 
   const handleOpenChange = (nextOpen: boolean) => {
@@ -144,7 +150,7 @@ export function GridLessonDialog({
 
   const isValid =
     lessonType !== "" &&
-    selectedStudentIds.length > 0 &&
+    (isOpenEnrollment || selectedStudentIds.length > 0) &&
     (durationOptions.length === 0 || duration !== null);
 
   const handleSubmit = async () => {
@@ -164,6 +170,8 @@ export function GridLessonDialog({
           studentIds: selectedStudentIds,
           teacherId: teacherId || undefined,
           notes: notes || undefined,
+          isOpenEnrollment,
+          pricePerStudent: pricePerStudent ? parseFloat(pricePerStudent) : undefined,
         }),
       });
       const data = await res.json();
@@ -237,9 +245,33 @@ export function GridLessonDialog({
               </div>
             )}
 
+            <div className="flex items-center justify-between">
+              <Label htmlFor="open-enrollment">{t("openEnrollment")}</Label>
+              <Switch
+                id="open-enrollment"
+                checked={isOpenEnrollment}
+                onCheckedChange={setIsOpenEnrollment}
+              />
+            </div>
+
+            {isOpenEnrollment && (
+              <div>
+                <Label>{t("pricePerStudent")} (RM)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  className="mt-1"
+                  placeholder={t("pricePerStudentPlaceholder")}
+                  value={pricePerStudent}
+                  onChange={(e) => setPricePerStudent(e.target.value)}
+                />
+              </div>
+            )}
+
             <div>
               <Label>
-                {t("students")} * ({selectedStudentIds.length}
+                {t("students")} {isOpenEnrollment ? "" : "*"} ({selectedStudentIds.length}
                 {selectedType ? `/${maxStudents}` : ""})
               </Label>
               <div className="flex flex-wrap gap-1.5 mt-2 max-h-32 overflow-y-auto border border-border rounded-md p-2">

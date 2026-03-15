@@ -26,6 +26,7 @@
     "home": "Home",
     "booking": "Book Court",
     "lessons": "Lessons",
+    "openLessons": "Open Lessons",
     "stringing": "Stringing",
     "shop": "Shop & Stringing",
     "shopAll": "All Products",
@@ -320,7 +321,27 @@
     "invalidFileType": "Invalid file type. Please upload an image.",
     "fileTooLarge": "File too large. Maximum size is 5MB.",
     "uploadFailed": "Failed to upload receipt. Please try again.",
-    "uploadingReceipt": "Uploading receipt..."
+    "uploadingReceipt": "Uploading receipt...",
+    "training": "Training",
+    "payment": {
+      "title": "Complete Payment",
+      "scanQR": "Scan the QR code to pay",
+      "amount": "Amount: RM{amount}",
+      "timeRemaining": "Time remaining to pay",
+      "expired": "Payment window expired",
+      "expiredDesc": "Your booking has been cancelled because the payment window has expired.",
+      "verified": "Payment Verified",
+      "verifiedDesc": "Your payment has been verified successfully.",
+      "pendingVerification": "Receipt Uploaded",
+      "pendingVerificationDesc": "Your receipt is being verified. You will be notified once approved.",
+      "bookAnother": "Book Another Court",
+      "viewBookings": "View My Bookings",
+      "uploadReceipt": "Upload Payment Receipt",
+      "paymentMethods": "Payment Methods"
+    },
+    "conflict": {
+      "trainingGroup": "This slot is blocked by a training group session"
+    }
   },
   "profile": {
     "title": "My Profile",
@@ -559,6 +580,25 @@
       "submitting": "Submitting...",
       "successTitle": "Request Submitted!",
       "successMessage": "Thank you for your interest! We will contact you within 24 hours to arrange your trial lesson."
+    },
+    "groups": {
+      "title": "Training Groups",
+      "subtitle": "Join a training group that fits your schedule and level",
+      "spotsLeft": "{count} spot(s) left",
+      "full": "Full",
+      "join": "Join Group",
+      "leave": "Leave Group",
+      "joined": "Joined",
+      "joinConfirm": "Join this training group?",
+      "joinConfirmDesc": "You will be added to this group's regular sessions.",
+      "leaveConfirm": "Leave this training group?",
+      "leaveConfirmDesc": "You will be removed from this group's regular sessions.",
+      "perSession": "per session",
+      "schedule": "Schedule",
+      "coach": "Coach",
+      "noGroups": "No training groups available at the moment.",
+      "filterAll": "All",
+      "memberSince": "Member since"
     }
   },
   "auth": {
@@ -965,6 +1005,9 @@
       "conflictError": "That slot is already occupied",
       "dragToMove": "Drag to move",
       "noTrainees": "No trainees found",
+      "openEnrollment": "Open Enrollment (any user can join & pay)",
+      "pricePerStudent": "Price per Student",
+      "pricePerStudentPlaceholder": "Leave blank to auto-calculate from lesson price",
       "hourSingular": "hour",
       "hourPlural": "hours",
       "moveSelected": "Move Selected",
@@ -2053,5 +2096,37 @@
       "activePeriod": "{start} — {end}",
       "videoDeleted": "Video deleted"
     }
+  },
+  "openLessons": {
+    "title": "Open Lessons",
+    "description": "Browse and join upcoming group lesson sessions",
+    "noSessions": "No open lessons available at the moment",
+    "spotsLeft": "{count} spot(s) left",
+    "full": "Full",
+    "join": "Join",
+    "joined": "Joined",
+    "pending": "Awaiting Payment",
+    "paid": "Confirmed",
+    "cancelled": "Cancelled",
+    "rejected": "Rejected",
+    "cancelEnrollment": "Cancel Enrollment",
+    "uploadReceipt": "Upload Receipt",
+    "pricePerPerson": "RM{price} / person",
+    "duration": "{hours} hr(s)",
+    "enrollDialogTitle": "Enroll in Lesson",
+    "enrollDialogDesc": "You are enrolling in this lesson. Please pay and upload your receipt.",
+    "amountDue": "Amount Due",
+    "paymentInstructions": "Transfer to our account and upload your receipt below.",
+    "enrollSuccess": "Enrolled successfully! Please upload your payment receipt.",
+    "enrollError": "Failed to enroll",
+    "cancelSuccess": "Enrollment cancelled",
+    "cancelError": "Failed to cancel enrollment",
+    "receiptUploaded": "Receipt uploaded! Awaiting admin confirmation.",
+    "receiptError": "Failed to upload receipt",
+    "loginToJoin": "Please log in to join a lesson",
+    "viewReceipt": "View Receipt",
+    "confirmCancel": "Cancel your enrollment?",
+    "confirmCancelDesc": "You can re-enroll later if spots are available.",
+    "confirm": "Confirm"
   }
 }

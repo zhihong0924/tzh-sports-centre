@@ -26,6 +26,7 @@
     "home": "Utama",
     "booking": "Tempah Gelanggang",
     "lessons": "Kelas",
+    "openLessons": "Kelas Terbuka",
     "stringing": "Pasang Tali",
     "profile": "Profil",
     "login": "Log Masuk",
@@ -309,7 +310,27 @@
     "invalidFileType": "Jenis fail tidak sah. Sila muat naik imej.",
     "fileTooLarge": "Fail terlalu besar. Saiz maksimum 5MB.",
     "uploadFailed": "Gagal memuat naik resit. Sila cuba lagi.",
-    "uploadingReceipt": "Memuat naik resit..."
+    "uploadingReceipt": "Memuat naik resit...",
+    "training": "Latihan",
+    "payment": {
+      "title": "Selesaikan Pembayaran",
+      "scanQR": "Imbas kod QR untuk membayar",
+      "amount": "Jumlah: RM{amount}",
+      "timeRemaining": "Masa pembayaran tinggal",
+      "expired": "Tempoh pembayaran tamat",
+      "expiredDesc": "Tempahan anda telah dibatalkan kerana tempoh pembayaran telah tamat.",
+      "verified": "Pembayaran Disahkan",
+      "verifiedDesc": "Pembayaran anda telah berjaya disahkan.",
+      "pendingVerification": "Resit Dimuat Naik",
+      "pendingVerificationDesc": "Resit anda sedang disahkan. Anda akan dimaklumkan setelah diluluskan.",
+      "bookAnother": "Tempah Gelanggang Lain",
+      "viewBookings": "Lihat Tempahan Saya",
+      "uploadReceipt": "Muat Naik Resit Pembayaran",
+      "paymentMethods": "Kaedah Pembayaran"
+    },
+    "conflict": {
+      "trainingGroup": "Slot ini disekat oleh sesi kumpulan latihan"
+    }
   },
   "profile": {
     "title": "Profil Saya",
@@ -548,6 +569,25 @@
       "submitting": "Menghantar...",
       "successTitle": "Permohonan Dihantar!",
       "successMessage": "Terima kasih atas minat anda! Kami akan menghubungi anda dalam masa 24 jam untuk mengatur kelas percubaan."
+    },
+    "groups": {
+      "title": "Kumpulan Latihan",
+      "subtitle": "Sertai kumpulan latihan yang sesuai dengan jadual dan tahap anda",
+      "spotsLeft": "{count} tempat tersedia",
+      "full": "Penuh",
+      "join": "Sertai Kumpulan",
+      "leave": "Tinggalkan Kumpulan",
+      "joined": "Telah Menyertai",
+      "joinConfirm": "Sertai kumpulan latihan ini?",
+      "joinConfirmDesc": "Anda akan ditambahkan ke sesi tetap kumpulan ini.",
+      "leaveConfirm": "Tinggalkan kumpulan latihan ini?",
+      "leaveConfirmDesc": "Anda akan dikeluarkan dari sesi tetap kumpulan ini.",
+      "perSession": "setiap sesi",
+      "schedule": "Jadual",
+      "coach": "Jurulatih",
+      "noGroups": "Tiada kumpulan latihan tersedia buat masa ini.",
+      "filterAll": "Semua",
+      "memberSince": "Ahli sejak"
     }
   },
   "auth": {
@@ -953,6 +993,9 @@
       "conflictError": "Slot itu sudah diduduki",
       "dragToMove": "Seret untuk pindah",
       "noTrainees": "Tiada pelatih ditemui",
+      "openEnrollment": "Pendaftaran Terbuka (mana-mana pengguna boleh sertai & bayar)",
+      "pricePerStudent": "Harga per Pelajar",
+      "pricePerStudentPlaceholder": "Kosongkan untuk dikira automatik daripada harga kelas",
       "hourSingular": "jam",
       "hourPlural": "jam",
       "moveSelected": "Pindah Dipilih",
@@ -2041,5 +2084,37 @@
       "activePeriod": "{start} — {end}",
       "videoDeleted": "Video dipadam"
     }
+  },
+  "openLessons": {
+    "title": "Kelas Terbuka",
+    "description": "Semak imbas dan sertai sesi kelas kumpulan yang akan datang",
+    "noSessions": "Tiada kelas terbuka pada masa ini",
+    "spotsLeft": "{count} tempat lagi",
+    "full": "Penuh",
+    "join": "Sertai",
+    "joined": "Telah Sertai",
+    "pending": "Menunggu Pembayaran",
+    "paid": "Disahkan",
+    "cancelled": "Dibatalkan",
+    "rejected": "Ditolak",
+    "cancelEnrollment": "Batal Pendaftaran",
+    "uploadReceipt": "Muat Naik Resit",
+    "pricePerPerson": "RM{price} / orang",
+    "duration": "{hours} jam",
+    "enrollDialogTitle": "Daftar ke Kelas",
+    "enrollDialogDesc": "Anda mendaftar ke kelas ini. Sila bayar dan muat naik resit anda.",
+    "amountDue": "Jumlah Perlu Dibayar",
+    "paymentInstructions": "Pindahkan ke akaun kami dan muat naik resit anda di bawah.",
+    "enrollSuccess": "Berjaya mendaftar! Sila muat naik resit pembayaran anda.",
+    "enrollError": "Gagal mendaftar",
+    "cancelSuccess": "Pendaftaran dibatalkan",
+    "cancelError": "Gagal membatalkan pendaftaran",
+    "receiptUploaded": "Resit dimuat naik. Menunggu pengesahan admin.",
+    "receiptError": "Gagal muat naik resit",
+    "loginToJoin": "Sila log masuk untuk menyertai kelas",
+    "viewReceipt": "Lihat Resit",
+    "confirmCancel": "Batalkan pendaftaran anda?",
+    "confirmCancelDesc": "Anda boleh mendaftar semula jika masih ada tempat.",
+    "confirm": "Sahkan"
   }
 }

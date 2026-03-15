@@ -134,12 +134,12 @@ function BookingPageContent() {
 
   const [showTngModal, setShowTngModal] = useState(false);
   const [tngBookingCreated, setTngBookingCreated] = useState(false);
-  const [, setTngBookingIds] = useState<string[]>([]);
+  const [tngBookingIds, setTngBookingIds] = useState<string[]>([]);
   const [tngHasPaid, setTngHasPaid] = useState(false);
 
   const [showDuitNowModal, setShowDuitNowModal] = useState(false);
   const [duitNowBookingCreated, setDuitNowBookingCreated] = useState(false);
-  const [, setDuitNowBookingIds] = useState<string[]>([]);
+  const [duitNowBookingIds, setDuitNowBookingIds] = useState<string[]>([]);
   const [duitNowHasPaid, setDuitNowHasPaid] = useState(false);
 
   const [tngReceiptFile, setTngReceiptFile] = useState<File | null>(null);
@@ -533,7 +533,7 @@ function BookingPageContent() {
 
     try {
       let receiptUrl: string | null = null;
-      if (tngReceiptFile) {
+      if (!session && tngReceiptFile) {
         setUploadingReceipt(true);
         receiptUrl = await uploadReceipt(tngReceiptFile);
         setUploadingReceipt(false);
@@ -562,7 +562,7 @@ function BookingPageContent() {
           guestPhone: guestPhone.trim(),
           guestEmail: guestEmail.trim() || session?.user?.email,
           paymentMethod: "tng",
-          paymentUserConfirmed: true,
+          paymentUserConfirmed: !session,
           receiptUrl,
         }),
       });
@@ -574,12 +574,21 @@ function BookingPageContent() {
         return;
       }
 
-      setTngBookingCreated(true);
-      setTngBookingIds(data.bookingIds || []);
-      celebrateBooking();
-
-      await fetchAvailability();
-      setSelectedSlots([]);
+      if (session) {
+        const ids = (data.bookingIds || []).join(",");
+        const expiresAt = data.expiresAt || "";
+        setShowTngModal(false);
+        celebrateBooking();
+        router.push(
+          `/booking/payment?ids=${encodeURIComponent(ids)}&method=tng&expiresAt=${encodeURIComponent(expiresAt)}`,
+        );
+      } else {
+        setTngBookingCreated(true);
+        setTngBookingIds(data.bookingIds || []);
+        celebrateBooking();
+        await fetchAvailability();
+        setSelectedSlots([]);
+      }
     } catch (_err) {
       toast.error("An unexpected error occurred");
     } finally {
@@ -618,7 +627,7 @@ function BookingPageContent() {
 
     try {
       let receiptUrl: string | null = null;
-      if (duitNowReceiptFile) {
+      if (!session && duitNowReceiptFile) {
         setUploadingReceipt(true);
         receiptUrl = await uploadReceipt(duitNowReceiptFile);
         setUploadingReceipt(false);
@@ -647,7 +656,7 @@ function BookingPageContent() {
           guestPhone: guestPhone.trim(),
           guestEmail: guestEmail.trim() || session?.user?.email,
           paymentMethod: "duitnow",
-          paymentUserConfirmed: true,
+          paymentUserConfirmed: !session,
           receiptUrl,
         }),
       });
@@ -659,12 +668,21 @@ function BookingPageContent() {
         return;
       }
 
-      setDuitNowBookingCreated(true);
-      setDuitNowBookingIds(data.bookingIds || []);
-      celebrateBooking();
-
-      await fetchAvailability();
-      setSelectedSlots([]);
+      if (session) {
+        const ids = (data.bookingIds || []).join(",");
+        const expiresAt = data.expiresAt || "";
+        setShowDuitNowModal(false);
+        celebrateBooking();
+        router.push(
+          `/booking/payment?ids=${encodeURIComponent(ids)}&method=duitnow&expiresAt=${encodeURIComponent(expiresAt)}`,
+        );
+      } else {
+        setDuitNowBookingCreated(true);
+        setDuitNowBookingIds(data.bookingIds || []);
+        celebrateBooking();
+        await fetchAvailability();
+        setSelectedSlots([]);
+      }
     } catch (_err) {
       toast.error("An unexpected error occurred");
     } finally {
@@ -1198,7 +1216,8 @@ function BookingPageContent() {
                   </div>
                 </div>
 
-                {/* Step 6: Upload Receipt */}
+                {/* Step 6: Upload Receipt (guests only — logged-in users upload on payment page) */}
+                {!session && (
                 <div className="bg-secondary rounded-xl p-4 space-y-3 border border-border">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-bold text-sm">
@@ -1253,9 +1272,11 @@ function BookingPageContent() {
                     </label>
                   )}
                 </div>
+                )}
               </div>
 
-              {/* "I have paid" Toggle */}
+              {/* "I have paid" Toggle (guests only) */}
+              {!session && (
               <div className="bg-card border-2 border-primary/30 rounded-xl p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -1281,33 +1302,68 @@ function BookingPageContent() {
                   {t("paymentMethods.tng")}
                 </p>
               </div>
+              )}
 
-              {/* Confirm Button */}
-              <Button
-                className={`w-full h-14 text-lg font-semibold ${tngHasPaid && tngReceiptFile ? "bg-primary hover:bg-primary/90" : "bg-accent cursor-not-allowed"}`}
-                size="lg"
-                onClick={handleTngBookingConfirm}
-                disabled={
-                  !tngHasPaid || !tngReceiptFile || booking || uploadingReceipt
-                }
-              >
-                {booking || uploadingReceipt ? (
-                  <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    {uploadingReceipt
-                      ? t("uploadingReceipt") || "Uploading receipt..."
-                      : "Creating Booking..."}
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="mr-2 h-5 w-5" />
-                    Confirm My Booking
-                  </>
-                )}
-              </Button>
-              <p className="text-xs text-center text-muted-foreground">
-                This will submit your booking for payment verification
-              </p>
+              {session ? (
+              <>
+                {/* Logged-in: 15-min payment window info + Reserve button */}
+                <div className="bg-primary/10 rounded-lg p-3 text-sm text-foreground flex items-start gap-2">
+                  <Clock className="w-4 h-4 mt-0.5 shrink-0 text-primary" />
+                  <p>
+                    You will have <strong>15 minutes</strong> to upload your
+                    payment receipt on the next page. Your slot will be held
+                    during this time.
+                  </p>
+                </div>
+                <Button
+                  className="w-full h-14 text-lg font-semibold bg-primary hover:bg-primary/90 text-white"
+                  size="lg"
+                  onClick={handleTngBookingConfirm}
+                  disabled={booking}
+                >
+                  {booking ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Creating Booking...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="mr-2 h-5 w-5" />
+                      Reserve & Proceed to Payment
+                    </>
+                  )}
+                </Button>
+              </>
+              ) : (
+              <>
+                {/* Guest: confirm button (requires paid toggle + receipt) */}
+                <Button
+                  className={`w-full h-14 text-lg font-semibold ${tngHasPaid && tngReceiptFile ? "bg-primary hover:bg-primary/90" : "bg-accent cursor-not-allowed"}`}
+                  size="lg"
+                  onClick={handleTngBookingConfirm}
+                  disabled={
+                    !tngHasPaid || !tngReceiptFile || booking || uploadingReceipt
+                  }
+                >
+                  {booking || uploadingReceipt ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      {uploadingReceipt
+                        ? t("uploadingReceipt") || "Uploading receipt..."
+                        : "Creating Booking..."}
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="mr-2 h-5 w-5" />
+                      Confirm My Booking
+                    </>
+                  )}
+                </Button>
+                <p className="text-xs text-center text-muted-foreground">
+                  This will submit your booking for payment verification
+                </p>
+              </>
+              )}
             </div>
           ) : (
             <div className="space-y-4 text-center py-4">
@@ -1460,7 +1516,8 @@ function BookingPageContent() {
                   </div>
                 </div>
 
-                {/* Step 6: Upload Receipt */}
+                {/* Step 6: Upload Receipt (guests only — logged-in users upload on payment page) */}
+                {!session && (
                 <div className="bg-secondary rounded-xl p-4 space-y-3 border border-border">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-bold text-sm">
@@ -1515,9 +1572,11 @@ function BookingPageContent() {
                     </label>
                   )}
                 </div>
+                )}
               </div>
 
-              {/* "I have paid" Toggle */}
+              {/* "I have paid" Toggle (guests only) */}
+              {!session && (
               <div className="bg-card border-2 border-primary/30 rounded-xl p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -1543,36 +1602,71 @@ function BookingPageContent() {
                   {t("paymentMethods.duitnow")}
                 </p>
               </div>
+              )}
 
-              {/* Confirm Button */}
-              <Button
-                className={`w-full h-14 text-lg font-semibold ${duitNowHasPaid && duitNowReceiptFile ? "bg-primary hover:bg-primary/90" : "bg-accent cursor-not-allowed"}`}
-                size="lg"
-                onClick={handleDuitNowBookingConfirm}
-                disabled={
-                  !duitNowHasPaid ||
-                  !duitNowReceiptFile ||
-                  booking ||
-                  uploadingReceipt
-                }
-              >
-                {booking || uploadingReceipt ? (
-                  <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    {uploadingReceipt
-                      ? t("uploadingReceipt") || "Uploading receipt..."
-                      : "Creating Booking..."}
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="mr-2 h-5 w-5" />
-                    Confirm My Booking
-                  </>
-                )}
-              </Button>
-              <p className="text-xs text-center text-muted-foreground">
-                This will submit your booking for payment verification
-              </p>
+              {session ? (
+              <>
+                {/* Logged-in: 15-min payment window info + Reserve button */}
+                <div className="bg-primary/10 rounded-lg p-3 text-sm text-foreground flex items-start gap-2">
+                  <Clock className="w-4 h-4 mt-0.5 shrink-0 text-primary" />
+                  <p>
+                    You will have <strong>15 minutes</strong> to upload your
+                    payment receipt on the next page. Your slot will be held
+                    during this time.
+                  </p>
+                </div>
+                <Button
+                  className="w-full h-14 text-lg font-semibold bg-primary hover:bg-primary/90 text-white"
+                  size="lg"
+                  onClick={handleDuitNowBookingConfirm}
+                  disabled={booking}
+                >
+                  {booking ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Creating Booking...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="mr-2 h-5 w-5" />
+                      Reserve & Proceed to Payment
+                    </>
+                  )}
+                </Button>
+              </>
+              ) : (
+              <>
+                {/* Guest: confirm button (requires paid toggle + receipt) */}
+                <Button
+                  className={`w-full h-14 text-lg font-semibold ${duitNowHasPaid && duitNowReceiptFile ? "bg-primary hover:bg-primary/90" : "bg-accent cursor-not-allowed"}`}
+                  size="lg"
+                  onClick={handleDuitNowBookingConfirm}
+                  disabled={
+                    !duitNowHasPaid ||
+                    !duitNowReceiptFile ||
+                    booking ||
+                    uploadingReceipt
+                  }
+                >
+                  {booking || uploadingReceipt ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      {uploadingReceipt
+                        ? t("uploadingReceipt") || "Uploading receipt..."
+                        : "Creating Booking..."}
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="mr-2 h-5 w-5" />
+                      Confirm My Booking
+                    </>
+                  )}
+                </Button>
+                <p className="text-xs text-center text-muted-foreground">
+                  This will submit your booking for payment verification
+                </p>
+              </>
+              )}
             </div>
           ) : (
             <div className="space-y-4 text-center py-4">

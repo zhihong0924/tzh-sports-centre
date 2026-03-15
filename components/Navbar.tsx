@@ -60,6 +60,12 @@ export function Navbar() {
               📖 {t("lessons")}
             </Link>
             <Link
+              href="/lessons/open"
+              className="px-2 xl:px-3 py-2 text-xs xl:text-sm text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
+            >
+              🎓 {t("openLessons")}
+            </Link>
+            <Link
               href="/shop"
               className="px-2 xl:px-3 py-2 text-xs xl:text-sm text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
             >
@@ -185,6 +191,13 @@ export function Navbar() {
               onClick={() => setMobileMenuOpen(false)}
             >
               📖 {t("lessons")}
+            </Link>
+            <Link
+              href="/lessons/open"
+              className="block py-2 text-muted-foreground hover:text-foreground"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              🎓 {t("openLessons")}
             </Link>
 
             <Link

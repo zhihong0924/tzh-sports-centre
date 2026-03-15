@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
 import { format, startOfDay, isBefore } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,6 +43,8 @@ import {
   Square,
   Pencil,
   X,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import TrialRequestsContent from "@/components/admin/TrialRequestsContent";
@@ -132,6 +135,19 @@ interface LessonAttendance {
   user?: { id: string; name: string };
 }
 
+interface LessonEnrollmentSummary {
+  id: string;
+  status: string;
+  amountDue: number;
+  receiptUrl: string | null;
+  user: {
+    id: string;
+    name: string | null;
+    phone: string | null;
+    email: string | null;
+  };
+}
+
 interface LessonSession {
   id: string;
   courtId: number;
@@ -144,8 +160,11 @@ interface LessonSession {
   price: number;
   status: string;
   notes: string | null;
+  isOpenEnrollment?: boolean;
   court: Court;
+  teacher?: { id: string; name: string } | null;
   students: Member[];
+  enrollments?: LessonEnrollmentSummary[];
   attendances?: LessonAttendance[];
 }
 
@@ -220,10 +239,29 @@ export default function LessonsContent({
   const [lessonRequests, setLessonRequests] = useState<LessonRequest[]>([]);
   const [bookedSlots, setBookedSlots] = useState<BookingSlot[]>([]);
 
+  const searchParams = useSearchParams();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [billingMonth, setBillingMonth] = useState(
     format(new Date(), "yyyy-MM"),
   );
+
+  const [pendingEditLessonId, setPendingEditLessonId] = useState<string | null>(null);
+
+  // Initialize date and pendingEditLessonId from URL params (e.g. when navigating from court bookings tab)
+  useEffect(() => {
+    const dateParam = searchParams.get("date");
+    const editLessonParam = searchParams.get("editLesson");
+    if (dateParam) {
+      const d = new Date(dateParam + "T12:00:00");
+      if (!isNaN(d.getTime())) {
+        setSelectedDate(d);
+      }
+    }
+    if (editLessonParam) {
+      setPendingEditLessonId(editLessonParam);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   const [availabilityDialogOpen, setAvailabilityDialogOpen] = useState(false);
@@ -278,6 +316,36 @@ export default function LessonsContent({
   >([]);
   const [trainingGroups, setTrainingGroups] = useState<TrainingGroup[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string>("");
+
+  // Edit lesson state
+  const [editLessonDialogOpen, setEditLessonDialogOpen] = useState(false);
+  const [editingLesson, setEditingLesson] = useState<LessonSession | null>(null);
+  const [editLessonType, setEditLessonType] = useState("");
+  const [editLessonDuration, setEditLessonDuration] = useState<number>(1.5);
+  const [editLessonCourtId, setEditLessonCourtId] = useState<number | null>(null);
+  const [editLessonStartTime, setEditLessonStartTime] = useState("");
+  const [editLessonTeacherId, setEditLessonTeacherId] = useState<string>("");
+  const [editLessonStudentIds, setEditLessonStudentIds] = useState<string[]>([]);
+  const [editLessonNotes, setEditLessonNotes] = useState("");
+  const [editStudentSearch, setEditStudentSearch] = useState("");
+
+  // Upcoming lessons panel
+  const [upcomingLessons, setUpcomingLessons] = useState<LessonSession[]>([]);
+  const [upcomingExpanded, setUpcomingExpanded] = useState(false);
+  const [loadingUpcoming, setLoadingUpcoming] = useState(false);
+
+  const fetchUpcomingLessons = async () => {
+    setLoadingUpcoming(true);
+    try {
+      const res = await fetch("/api/admin/lessons?upcoming=true&limit=30");
+      const data = await res.json();
+      setUpcomingLessons(data.lessons || []);
+    } catch (error) {
+      console.error("Error fetching upcoming lessons:", error);
+    } finally {
+      setLoadingUpcoming(false);
+    }
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -812,6 +880,54 @@ export default function LessonsContent({
     }
   };
 
+  const openEditLessonDialog = (lesson: LessonSession) => {
+    setEditingLesson(lesson);
+    setEditLessonType(lesson.lessonType);
+    setEditLessonDuration(lesson.duration);
+    setEditLessonCourtId(lesson.court.id);
+    setEditLessonStartTime(lesson.startTime);
+    setEditLessonTeacherId(lesson.teacher?.id || "none");
+    setEditLessonStudentIds(lesson.students.map((s) => s.id));
+    setEditLessonNotes(lesson.notes || "");
+    setEditStudentSearch("");
+    setEditLessonDialogOpen(true);
+  };
+
+  const handleEditLesson = async () => {
+    if (!editingLesson || !editLessonCourtId || !editLessonStartTime || !editLessonType) return;
+
+    setActionLoading(true);
+    try {
+      const res = await fetch("/api/admin/lessons", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lessonId: editingLesson.id,
+          courtId: editLessonCourtId,
+          startTime: editLessonStartTime,
+          lessonType: editLessonType,
+          duration: editLessonDuration,
+          studentIds: editLessonStudentIds,
+          notes: editLessonNotes || null,
+          teacherId: editLessonTeacherId && editLessonTeacherId !== "none" ? editLessonTeacherId : null,
+        }),
+      });
+
+      if (res.ok) {
+        setEditLessonDialogOpen(false);
+        setEditingLesson(null);
+        fetchLessonsForDate();
+      } else {
+        const data = await res.json();
+        alert(data.error || "Failed to update lesson");
+      }
+    } catch (error) {
+      console.error("Error updating lesson:", error);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleCancelLesson = async (lessonId: string) => {
     if (!confirm("Are you sure you want to cancel this lesson?")) return;
 
@@ -829,6 +945,18 @@ export default function LessonsContent({
       setActionLoading(false);
     }
   };
+
+  // Auto-open edit dialog when navigated here with editLesson URL param
+  useEffect(() => {
+    if (pendingEditLessonId && lessons.length > 0) {
+      const lesson = lessons.find((l) => l.id === pendingEditLessonId);
+      if (lesson) {
+        openEditLessonDialog(lesson);
+        setPendingEditLessonId(null);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingEditLessonId, lessons]);
 
   const openAttendanceDialog = (lesson: LessonSession) => {
     const typeInfo = getLessonTypeInfo(lesson.lessonType);
@@ -1154,44 +1282,61 @@ export default function LessonsContent({
                                             </div>
                                             <div className="text-muted-foreground mt-1">
                                               <Users className="w-3 h-3 inline mr-1" />
-                                              {lesson.students
-                                                .map((s) => s.name)
-                                                .join(", ")}
+                                              {lesson.isOpenEnrollment
+                                                ? lesson.enrollments && lesson.enrollments.length > 0
+                                                  ? lesson.enrollments.map((e) => e.user.name || "Unknown").join(", ")
+                                                  : "No enrollments yet"
+                                                : lesson.students
+                                                    .map((s) => s.name)
+                                                    .join(", ")}
                                             </div>
                                             <div className="text-muted-foreground mt-1">
                                               <Clock className="w-3 h-3 inline mr-1" />
                                               {lesson.duration}hr • RM
                                               {lesson.price}
                                             </div>
-                                            {lesson.status === "scheduled" && (
-                                              <div className="flex gap-1 mt-2">
-                                                <Button
-                                                  variant="ghost"
-                                                  size="sm"
-                                                  className="h-6 text-green-700 hover:text-green-600 hover:bg-green-100 flex-1"
-                                                  onClick={() =>
-                                                    openAttendanceDialog(lesson)
-                                                  }
-                                                  disabled={actionLoading}
-                                                >
-                                                  <CheckSquare className="w-3 h-3 mr-1" />
-                                                  Attend
-                                                </Button>
-                                                <Button
-                                                  variant="ghost"
-                                                  size="sm"
-                                                  className="h-6 text-red-600 hover:text-red-500 hover:bg-red-50"
-                                                  onClick={() =>
-                                                    handleCancelLesson(
-                                                      lesson.id,
-                                                    )
-                                                  }
-                                                  disabled={actionLoading}
-                                                >
-                                                  <Trash2 className="w-3 h-3" />
-                                                </Button>
-                                              </div>
-                                            )}
+                                            <div className="flex gap-1 mt-2">
+                                              <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-6 text-blue-600 hover:text-blue-500 hover:bg-blue-50"
+                                                onClick={() =>
+                                                  openEditLessonDialog(lesson)
+                                                }
+                                                disabled={actionLoading}
+                                              >
+                                                <Pencil className="w-3 h-3" />
+                                              </Button>
+                                              {lesson.status === "scheduled" && (
+                                                <>
+                                                  <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="h-6 text-green-700 hover:text-green-600 hover:bg-green-100 flex-1"
+                                                    onClick={() =>
+                                                      openAttendanceDialog(lesson)
+                                                    }
+                                                    disabled={actionLoading}
+                                                  >
+                                                    <CheckSquare className="w-3 h-3 mr-1" />
+                                                    Attend
+                                                  </Button>
+                                                  <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="h-6 text-red-600 hover:text-red-500 hover:bg-red-50"
+                                                    onClick={() =>
+                                                      handleCancelLesson(
+                                                        lesson.id,
+                                                      )
+                                                    }
+                                                    disabled={actionLoading}
+                                                  >
+                                                    <Trash2 className="w-3 h-3" />
+                                                  </Button>
+                                                </>
+                                              )}
+                                            </div>
                                           </div>
                                         </td>
                                       );
@@ -1366,9 +1511,13 @@ export default function LessonsContent({
                                       </div>
                                       <div className="text-sm text-muted-foreground mt-1">
                                         <Users className="w-3 h-3 inline mr-1" />
-                                        {lesson.students
-                                          .map((s) => s.name)
-                                          .join(", ")}
+                                        {lesson.isOpenEnrollment
+                                          ? lesson.enrollments && lesson.enrollments.length > 0
+                                            ? lesson.enrollments.map((e) => `${e.user.name || "Unknown"} (${e.status === "PAID" ? "✓" : e.receiptUrl ? "receipt" : "pending"})`).join(", ")
+                                            : "No enrollments yet"
+                                          : lesson.students
+                                              .map((s) => s.name)
+                                              .join(", ")}
                                       </div>
                                       <div className="text-sm font-medium mt-1 text-foreground">
                                         RM{lesson.price} (
@@ -1379,6 +1528,18 @@ export default function LessonsContent({
                                       </div>
                                     </div>
                                     <div className="flex gap-2">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="text-blue-600"
+                                        onClick={() =>
+                                          openEditLessonDialog(lesson)
+                                        }
+                                        disabled={actionLoading}
+                                      >
+                                        <Pencil className="w-4 h-4 mr-1" />
+                                        Edit
+                                      </Button>
                                       {lesson.status === "scheduled" && (
                                         <>
                                           <Button
@@ -1423,6 +1584,123 @@ export default function LessonsContent({
                 members={members}
                 teachers={activeTeachers}
               />
+
+              {/* Upcoming Lessons Panel */}
+              <Card>
+                <CardHeader
+                  className="pb-3 cursor-pointer select-none"
+                  onClick={() => {
+                    const newVal = !upcomingExpanded;
+                    setUpcomingExpanded(newVal);
+                    if (newVal && upcomingLessons.length === 0) {
+                      fetchUpcomingLessons();
+                    }
+                  }}
+                >
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <GraduationCap className="w-5 h-5" />
+                      Upcoming Lessons
+                      {upcomingLessons.length > 0 && (
+                        <Badge variant="outline">{upcomingLessons.length}</Badge>
+                      )}
+                    </CardTitle>
+                    <div className="flex items-center gap-2">
+                      {upcomingExpanded && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            fetchUpcomingLessons();
+                          }}
+                          disabled={loadingUpcoming}
+                        >
+                          <RefreshCw className={`w-4 h-4 ${loadingUpcoming ? "animate-spin" : ""}`} />
+                        </Button>
+                      )}
+                      {upcomingExpanded ? (
+                        <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                      )}
+                    </div>
+                  </div>
+                </CardHeader>
+                {upcomingExpanded && (
+                  <CardContent>
+                    {loadingUpcoming ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : upcomingLessons.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        No upcoming lessons scheduled
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {upcomingLessons.map((lesson) => {
+                          const typeInfo = getLessonTypeInfo(lesson.lessonType);
+                          return (
+                            <div
+                              key={lesson.id}
+                              className={`p-4 rounded-lg border ${
+                                lesson.status === "completed"
+                                  ? "bg-green-50 border-green-300"
+                                  : "bg-purple-50 border-purple-300"
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                                    <span className="font-medium text-foreground">
+                                      {typeInfo?.name || lesson.lessonType}
+                                    </span>
+                                    <Badge variant="outline">{lesson.court.name}</Badge>
+                                    <Badge variant="outline">
+                                      {format(new Date(lesson.lessonDate), "d MMM yyyy")}
+                                    </Badge>
+                                    {lesson.status === "completed" && (
+                                      <Badge className="bg-green-600 text-white">Completed</Badge>
+                                    )}
+                                  </div>
+                                  <div className="text-sm text-muted-foreground">
+                                    <Clock className="w-3 h-3 inline mr-1" />
+                                    {lesson.startTime} – {lesson.endTime} ({lesson.duration}hr)
+                                  </div>
+                                  <div className="text-sm text-muted-foreground mt-1">
+                                    <Users className="w-3 h-3 inline mr-1" />
+                                    {lesson.isOpenEnrollment
+                                      ? lesson.enrollments && lesson.enrollments.length > 0
+                                        ? lesson.enrollments.map((e) => e.user.name || "Unknown").join(", ")
+                                        : "No enrollments yet"
+                                      : lesson.students.length > 0
+                                        ? lesson.students.map((s) => s.name).join(", ")
+                                        : "No students"}
+                                  </div>
+                                </div>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-blue-600 shrink-0"
+                                  onClick={() => {
+                                    setSelectedDate(new Date(lesson.lessonDate));
+                                    openEditLessonDialog(lesson);
+                                  }}
+                                  disabled={actionLoading}
+                                >
+                                  <Pencil className="w-4 h-4 mr-1" />
+                                  Edit
+                                </Button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </CardContent>
+                )}
+              </Card>
             </div>
           )}
 
@@ -1809,7 +2087,220 @@ export default function LessonsContent({
         </DialogContent>
       </Dialog>
 
-      {/* Add Lesson Dialog */}
+      {/* Edit Lesson Dialog */}
+      <Dialog open={editLessonDialogOpen} onOpenChange={setEditLessonDialogOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Lesson</DialogTitle>
+            <DialogDescription>
+              Update lesson details for {editingLesson ? format(new Date(editingLesson.lessonDate), "EEEE, MMMM d, yyyy") : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Lesson Type</Label>
+                <Select
+                  value={editLessonType}
+                  onValueChange={(v) => {
+                    setEditLessonType(v);
+                    setEditLessonDuration(getDefaultDuration(v));
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {LESSON_TYPES.map((type) => (
+                      <SelectItem key={type.slug} value={type.slug}>
+                        {type.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Duration</Label>
+                <Select
+                  value={editLessonDuration.toString()}
+                  onValueChange={(v) => setEditLessonDuration(parseFloat(v))}
+                  disabled={!editLessonType}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select duration" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {editLessonType &&
+                      getDurationOptions(editLessonType).map((opt) => (
+                        <SelectItem
+                          key={opt.value}
+                          value={opt.value.toString()}
+                        >
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Court</Label>
+                <Select
+                  value={editLessonCourtId?.toString() || ""}
+                  onValueChange={(v) => setEditLessonCourtId(parseInt(v))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select court" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {courts.map((court) => (
+                      <SelectItem key={court.id} value={court.id.toString()}>
+                        {court.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Start Time</Label>
+                <Select
+                  value={editLessonStartTime}
+                  onValueChange={setEditLessonStartTime}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select time" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TIME_SLOTS.map((slot) => (
+                      <SelectItem key={slot.slotTime} value={slot.slotTime}>
+                        {slot.displayName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div>
+              <Label>Teacher (Optional)</Label>
+              <Select
+                value={editLessonTeacherId}
+                onValueChange={setEditLessonTeacherId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="No teacher assigned" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No teacher</SelectItem>
+                  {activeTeachers.map((teacher) => (
+                    <SelectItem key={teacher.id} value={teacher.id}>
+                      {teacher.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {editingLesson && !editingLesson.isOpenEnrollment && (
+              <div>
+                <Label>Students</Label>
+                <div className="mt-2">
+                  <Input
+                    placeholder="Search by name or UID..."
+                    value={editStudentSearch}
+                    onChange={(e) => setEditStudentSearch(e.target.value)}
+                    className="mb-2"
+                  />
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {members
+                      .filter((member) => {
+                        if (!editStudentSearch) return true;
+                        const search = editStudentSearch.toLowerCase();
+                        return (
+                          member.name.toLowerCase().includes(search) ||
+                          member.uid.toLowerCase().includes(search)
+                        );
+                      })
+                      .map((member) => (
+                        <label
+                          key={member.id}
+                          className={`flex items-center gap-2 p-2 rounded border cursor-pointer ${
+                            editLessonStudentIds.includes(member.id)
+                              ? "bg-primary/30 border-primary"
+                              : "bg-card border-border"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={editLessonStudentIds.includes(member.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setEditLessonStudentIds([
+                                  ...editLessonStudentIds,
+                                  member.id,
+                                ]);
+                              } else {
+                                setEditLessonStudentIds(
+                                  editLessonStudentIds.filter(
+                                    (id) => id !== member.id,
+                                  ),
+                                );
+                              }
+                            }}
+                            className="rounded"
+                          />
+                          <span className="text-xs text-muted-foreground/70">
+                            #{member.uid}
+                          </span>
+                          <span className="text-foreground">{member.name}</span>
+                          {member.skillLevel && (
+                            <Badge variant="outline" className="text-xs">
+                              {member.skillLevel}
+                            </Badge>
+                          )}
+                        </label>
+                      ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div>
+              <Label>Notes (optional)</Label>
+              <Input
+                value={editLessonNotes}
+                onChange={(e) => setEditLessonNotes(e.target.value)}
+                placeholder="Any notes about this session"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setEditLessonDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleEditLesson}
+              disabled={
+                actionLoading ||
+                !editLessonCourtId ||
+                !editLessonStartTime ||
+                !editLessonType
+              }
+            >
+              {actionLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                "Save Changes"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <Dialog open={lessonDialogOpen} onOpenChange={setLessonDialogOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>

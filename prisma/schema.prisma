@@ -43,6 +43,7 @@ model User {
   absences              Absence[]
   replacementCredits    ReplacementCredit[]
   replacementBookings   ReplacementBooking[]
+  lessonEnrollments     LessonEnrollment[]
   gameSessions          GameSession[]
   sessionAttendances    SessionAttendance[]
   matchPlayers          MatchPlayer[]
@@ -69,6 +70,7 @@ model Court {
   recurringBookings RecurringBooking[]
   recurringLessons  RecurringLesson[]
   gameSessions      GameSession[]
+  trainingGroups    TrainingGroup[]
 
   @@map("courts")
 }
@@ -97,6 +99,7 @@ model Booking {
   expirationWarningSent Boolean   @default(false) @map("expiration_warning_sent")
   expiredAt             DateTime? @map("expired_at")
   paymentExempt         Boolean   @default(false) @map("payment_exempt")
+  expiresAt             DateTime? @map("expires_at")
   createdAt             DateTime  @default(now()) @map("created_at")
   updatedAt             DateTime  @updatedAt @map("updated_at")
   paymentScreenshotUrl       String?   @map("payment_screenshot_url")
@@ -227,6 +230,8 @@ model LessonSession {
   billingType          String               @default("per_session") @map("billing_type")
   duration             Float
   price                Float
+  pricePerStudent      Float?               @map("price_per_student")
+  isOpenEnrollment     Boolean              @default(false) @map("is_open_enrollment")
   status               String               @default("scheduled")
   notes                String?
   createdAt            DateTime             @default(now()) @map("created_at")
@@ -237,11 +242,13 @@ model LessonSession {
   absences             Absence[]
   replacementBookings  ReplacementBooking[]
   attendances          LessonAttendance[]
+  enrollments          LessonEnrollment[]
   recurringLessonId    String?              @map("recurring_lesson_id")
   recurringLesson      RecurringLesson?     @relation(fields: [recurringLessonId], references: [id])
 
   @@index([teacherId])
   @@index([recurringLessonId])
+  @@index([isOpenEnrollment])
   @@map("lesson_sessions")
 }
 
@@ -250,6 +257,34 @@ enum AttendanceStatus {
   ABSENT
   LATE
   EXCUSED
+}
+
+enum EnrollmentStatus {
+  PENDING_PAYMENT
+  PAID
+  REJECTED
+  CANCELLED
+}
+
+model LessonEnrollment {
+  id              String           @id @default(cuid())
+  lessonSessionId String           @map("lesson_session_id")
+  lessonSession   LessonSession    @relation(fields: [lessonSessionId], references: [id])
+  userId          String           @map("user_id")
+  user            User             @relation(fields: [userId], references: [id])
+  status          EnrollmentStatus @default(PENDING_PAYMENT)
+  amountDue       Float            @map("amount_due")
+  receiptUrl      String?          @map("receipt_url")
+  adminNotes      String?          @map("admin_notes")
+  reviewedAt      DateTime?        @map("reviewed_at")
+  reviewedBy      String?          @map("reviewed_by")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+
+  @@unique([lessonSessionId, userId])
+  @@index([userId])
+  @@index([lessonSessionId])
+  @@map("lesson_enrollments")
 }
 
 model LessonAttendance {
@@ -674,6 +709,7 @@ model Teacher {
   payRates         TeacherPayRate[]
   lessonSessions   LessonSession[]
   recurringLessons RecurringLesson[]
+  trainingGroups   TrainingGroup[]
 
   @@map("teachers")
 }
@@ -797,16 +833,39 @@ model PlayerProfile {
 
 // ─── Training Groups ─────────────────────────────────────────────────────────
 
-model TrainingGroup {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  sport     String   @default("badminton")
-  notes     String?
-  isActive  Boolean  @default(true) @map("is_active")
-  members   User[]   @relation("TrainingGroupMembers")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+enum GroupType {
+  ONE_TO_ONE
+  ONE_TO_TWO
+  ONE_TO_THREE
+  ONE_TO_FOUR
+  KIDS
+}
 
+model TrainingGroup {
+  id              String    @id @default(cuid())
+  name            String    @unique
+  sport           String    @default("badminton")
+  groupType       GroupType @default(ONE_TO_ONE) @map("group_type")
+  maxCapacity     Int       @default(1) @map("max_capacity")
+  duration        Float     @default(1.5)
+  dayOfWeek       Int       @default(0) @map("day_of_week")
+  startTime       String    @default("09:00") @map("start_time")
+  endTime         String    @default("10:30") @map("end_time")
+  courtId         Int?      @map("court_id")
+  court           Court?    @relation(fields: [courtId], references: [id])
+  teacherId       String?   @map("teacher_id")
+  teacher         Teacher?  @relation(fields: [teacherId], references: [id])
+  pricePerSession Float?    @map("price_per_session")
+  isJoinable      Boolean   @default(true) @map("is_joinable")
+  notes           String?
+  isActive        Boolean   @default(true) @map("is_active")
+  members         User[]    @relation("TrainingGroupMembers")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@index([dayOfWeek])
+  @@index([courtId])
+  @@index([isActive])
   @@map("training_groups")
 }
 

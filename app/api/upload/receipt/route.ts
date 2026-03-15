@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { put } from '@vercel/blob'
 import { auth } from '@/lib/auth'
+import { uploadFile } from '@/lib/blob-upload'
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']
@@ -53,11 +53,7 @@ export async function POST(request: NextRequest) {
     const randomString = Math.random().toString(36).substring(2, 8)
     const filename = `receipts/receipt-${timestamp}-${randomString}.${extension}`
 
-    // Upload to Vercel Blob
-    const blob = await put(filename, file, {
-      access: 'public',
-      addRandomSuffix: false,
-    })
+    const blob = await uploadFile(file, filename)
 
     return NextResponse.json({
       success: true,

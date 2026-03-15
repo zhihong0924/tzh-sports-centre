@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, CalendarDays, GraduationCap, Loader2 } from 'lucide-react'
+import { ArrowLeft, CalendarDays, GraduationCap, Loader2, Users } from 'lucide-react'
 import { isAdmin } from '@/lib/admin'
 import { useTranslations } from 'next-intl'
 import dynamic from 'next/dynamic'
@@ -26,7 +26,15 @@ const LessonsContent = dynamic(() => import('@/components/admin/LessonsContent')
   ),
 })
 
-type TabType = 'court-bookings' | 'lessons'
+const AdminEnrollmentsContent = dynamic(() => import('@/components/admin/AdminEnrollmentsContent'), {
+  loading: () => (
+    <div className="flex items-center justify-center py-12">
+      <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+    </div>
+  ),
+})
+
+type TabType = 'court-bookings' | 'lessons' | 'enrollments'
 
 function BookingsLessonsContent() {
   const { data: session, status } = useSession()
@@ -35,7 +43,9 @@ function BookingsLessonsContent() {
   const t = useTranslations('admin')
 
   const urlTab = searchParams.get('tab') as TabType | null
-  const [activeTab, setActiveTab] = useState<TabType>(urlTab === 'lessons' ? 'lessons' : 'court-bookings')
+  const [activeTab, setActiveTab] = useState<TabType>(
+    urlTab === 'lessons' ? 'lessons' : urlTab === 'enrollments' ? 'enrollments' : 'court-bookings'
+  )
 
   useEffect(() => {
     if (status === 'loading') return
@@ -103,11 +113,24 @@ function BookingsLessonsContent() {
             <GraduationCap className="w-4 h-4 mr-2" />
             {t('bookingsLessons.tabs.lessons')}
           </Button>
+          <Button
+            variant="ghost"
+            className={`rounded-none border-b-2 ${
+              activeTab === 'enrollments'
+                ? 'border-primary text-foreground'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+            onClick={() => handleTabChange('enrollments')}
+          >
+            <Users className="w-4 h-4 mr-2" />
+            Enrollments
+          </Button>
         </div>
 
         {/* Tab Content */}
         {activeTab === 'court-bookings' && <CourtBookingsContent />}
         {activeTab === 'lessons' && <LessonsContent />}
+        {activeTab === 'enrollments' && <AdminEnrollmentsContent />}
       </div>
     </div>
   )

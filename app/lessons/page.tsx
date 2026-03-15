@@ -14,6 +14,7 @@ import {
   Loader2,
 } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import TrialRequestForm from "@/components/TrialRequestForm";
 import { LessonDetailsModal } from "@/components/LessonDetailsModal";
@@ -232,6 +233,25 @@ export default function LessonsPage() {
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Open Enrollment CTA */}
+      <section className="py-10 bg-primary/5 border-y border-primary/20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
+              🎓 Open Enrollment Sessions
+            </h2>
+            <p className="text-muted-foreground mt-1">
+              Browse available group sessions and join with a one-time payment — no commitment required.
+            </p>
+          </div>
+          <Link href="/lessons/open">
+            <Button className="bg-primary hover:bg-primary/90 text-white rounded-full whitespace-nowrap">
+              Browse Open Sessions
+            </Button>
+          </Link>
         </div>
       </section>
 

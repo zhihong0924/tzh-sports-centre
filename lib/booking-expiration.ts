@@ -10,6 +10,14 @@ import {
 const STANDARD_EXPIRATION_HOURS = 48; // 48 hours from creation for bookings > 48 hours away
 const SHORT_WINDOW_HOURS_BEFORE = 12; // Must be confirmed 12 hours before booking time
 const WARNING_HOURS_BEFORE = 24; // Send warning 24 hours before expiration
+export const PAYMENT_WINDOW_MINUTES = 15; // 15 minutes to upload receipt after booking
+
+/**
+ * Calculate the payment deadline for a new booking (15 minutes from creation)
+ */
+export function calculatePaymentDeadline(createdAt: Date): Date {
+  return new Date(createdAt.getTime() + PAYMENT_WINDOW_MINUTES * 60 * 1000);
+}
 
 export interface ExpirationCheckResult {
   expired: string[];
@@ -62,7 +70,10 @@ export async function checkAndExpireBookings(
   const whereClause: Record<string, unknown> = {
     paymentExempt: false,
     OR: [
-      { status: "pending", expiredAt: null },
+      // Bookings with explicit 15-min expiresAt that have passed
+      { status: "pending", expiredAt: null, expiresAt: { not: null, lte: now } },
+      // Legacy bookings without expiresAt (use original 48hr/12hr logic)
+      { status: "pending", expiredAt: null, expiresAt: null },
       { status: "confirmed", paymentStatus: "pending", expiredAt: null },
     ],
   };
@@ -87,10 +98,10 @@ export async function checkAndExpireBookings(
       const [hours, minutes] = booking.startTime.split(":").map(Number);
       bookingDateTime.setHours(hours, minutes, 0, 0);
 
-      const expirationTime = calculateExpirationTime(
-        createdAt,
-        bookingDateTime,
-      );
+      // Use expiresAt if set (15-min payment window), otherwise fall back to legacy logic
+      const expirationTime = (booking as Record<string, unknown>).expiresAt
+        ? new Date((booking as Record<string, unknown>).expiresAt as string)
+        : calculateExpirationTime(createdAt, bookingDateTime);
       const hoursUntilExpiration =
         (expirationTime.getTime() - now.getTime()) / (1000 * 60 * 60);
 
@@ -237,9 +248,11 @@ export function getBookingExpirationInfo(booking: {
   startTime: string;
   status: string;
   expiredAt: Date | null;
+  expiresAt?: Date | null;
 }): {
   expirationTime: Date;
   hoursRemaining: number;
+  minutesRemaining: number;
   isExpired: boolean;
   willExpireSoon: boolean;
 } {
@@ -249,18 +262,26 @@ export function getBookingExpirationInfo(booking: {
   const [hours, minutes] = booking.startTime.split(":").map(Number);
   bookingDateTime.setHours(hours, minutes, 0, 0);
 
-  const expirationTime = calculateExpirationTime(createdAt, bookingDateTime);
+  // Use expiresAt if set (15-min payment window), otherwise legacy logic
+  const expirationTime = booking.expiresAt
+    ? new Date(booking.expiresAt)
+    : calculateExpirationTime(createdAt, bookingDateTime);
   const hoursRemaining =
     (expirationTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+  const minutesRemaining =
+    (expirationTime.getTime() - now.getTime()) / (1000 * 60);
 
   return {
     expirationTime,
     hoursRemaining: Math.max(0, hoursRemaining),
+    minutesRemaining: Math.max(0, minutesRemaining),
     isExpired:
       booking.status === "expired" ||
       booking.expiredAt !== null ||
       now >= expirationTime,
     willExpireSoon:
-      hoursRemaining <= WARNING_HOURS_BEFORE && hoursRemaining > 0,
+      booking.expiresAt
+        ? minutesRemaining <= 5 && minutesRemaining > 0
+        : hoursRemaining <= WARNING_HOURS_BEFORE && hoursRemaining > 0,
   };
 }

@@ -7,6 +7,7 @@ export type SlotStatus =
   | 'my-pending'       // Yellow - Member's pending request
   | 'coach-suggested'  // Purple - Coach suggested different time (needs response)
   | 'unavailable'      // Light gray - Coach not available
+  | 'training'         // Orange - Training group session
 
 export interface TimeSlot {
   time: string      // "09:00", "09:30", etc.
@@ -309,5 +310,10 @@ export const slotStatusStyles: Record<SlotStatus, { bg: string; border: string; 
     bg: 'bg-gray-50',
     border: 'border-gray-100',
     text: 'text-gray-400',
+  },
+  training: {
+    bg: 'bg-orange-100',
+    border: 'border-orange-300',
+    text: 'text-orange-700',
   },
 }

@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     const queryDate = new Date(date);
     const dayOfWeek = queryDate.getDay();
 
-    const [bookings, recurringBookings, lessonSessions, timeSlots, courts] =
+    const [bookings, recurringBookings, lessonSessions, trainingGroups, timeSlots, courts] =
       await Promise.all([
         prisma.booking.findMany({
           where: {
@@ -72,6 +72,17 @@ export async function GET(request: NextRequest) {
           },
           orderBy: [{ courtId: "asc" }, { startTime: "asc" }],
         }),
+        prisma.trainingGroup.findMany({
+          where: {
+            dayOfWeek,
+            isActive: true,
+            courtId: { not: null },
+          },
+          include: {
+            members: { select: { name: true } },
+            teacher: { select: { name: true } },
+          },
+        }),
         getCachedTimeSlots(),
         getCachedCourts(),
       ]);
@@ -98,6 +109,7 @@ export async function GET(request: NextRequest) {
         isLesson?: boolean;
         lessonStudents?: string[];
         lessonType?: string;
+        lessonStatus?: string;
       }
     > = {};
 
@@ -165,6 +177,35 @@ export async function GET(request: NextRequest) {
             isLesson: true,
             lessonStudents: studentNames,
             lessonType: lesson.lessonType,
+            lessonStatus: lesson.status,
+          };
+        }
+      }
+    });
+
+    // Add training group slots to booking map
+    const allSlotTimesForGroups = timeSlots.map((s: { slotTime: string }) => s.slotTime);
+    trainingGroups.forEach((group) => {
+      if (!group.courtId) return;
+      const startIdx = allSlotTimesForGroups.indexOf(group.startTime);
+      const endIdx = allSlotTimesForGroups.indexOf(group.endTime);
+      if (startIdx === -1) return;
+      const endIndex = endIdx !== -1 ? endIdx : allSlotTimesForGroups.length;
+      const memberNames = group.members.map((m: { name: string | null }) => m.name || "Unknown");
+      for (let i = startIdx; i < endIndex; i++) {
+        const key = `${group.courtId}-${allSlotTimesForGroups[i]}`;
+        if (!bookingMap[key]) {
+          bookingMap[key] = {
+            id: group.id,
+            name: group.name + (group.teacher ? ` (${group.teacher.name})` : ""),
+            phone: "",
+            email: null,
+            sport: group.sport,
+            status: "training",
+            isGuest: false,
+            isLesson: true,
+            lessonStudents: memberNames,
+            lessonType: `Training: ${group.groupType}`,
           };
         }
       }
@@ -174,6 +215,7 @@ export async function GET(request: NextRequest) {
       date,
       bookings,
       recurringBookings,
+      trainingGroups,
       bookingMap,
       timeSlots,
       courts,
